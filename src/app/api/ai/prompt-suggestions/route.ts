@@ -121,8 +121,6 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     destination = "旅途中",
-    startDate,
-    endDate,
     messages,
     notes,
     demoMode = false,
@@ -173,8 +171,6 @@ JSON 格式：
         {
           role: "user",
           content: `旅程目的地：${destination || "旅途中"}
-日期：${startDate ?? "未知"} 至 ${endDate ?? "未知"}
-
 最近对话：
 ${messageSummary || "暂无"}
 

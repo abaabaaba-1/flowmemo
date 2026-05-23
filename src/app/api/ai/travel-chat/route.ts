@@ -27,13 +27,13 @@ function demoAnswer(message: string) {
 - 一句现场感受：比如风、气味、声音、身体感受
 - 一张环境照片：路牌、桌面、背影、窗外光线都可以
 
-你按住底部语音说一段，我会把它写入时间线，并从照片池里自动挑适合的图做手账拼贴。`;
+你按住底部语音说一段，我会把它写入 Pocket，并从照片池里自动挑适合的图做手账拼贴。`;
   }
 
   if (message.includes("修善寺") || message.includes("路线")) {
     return `修善寺这段建议不要排太满。温泉街、竹林小径和河边散步放在同一个半天最舒服。
 
-上午先走竹林小径，人少光线也柔；中午回温泉街吃饭；傍晚留给旅馆和温泉。这样照片、声音和感受会自然连成一条时间线。`;
+上午先走竹林小径，人少光线也柔；中午回温泉街吃饭；傍晚留给旅馆和温泉。这样照片、声音和感受会自然连成一张今日手账。`;
   }
 
   return "";
@@ -44,8 +44,6 @@ export async function POST(request: NextRequest) {
   const {
     message,
     destination = "旅途中",
-    startDate,
-    endDate,
     notes = [],
     demoMode = false,
   } = body;
@@ -85,10 +83,9 @@ export async function POST(request: NextRequest) {
         content: `你是 FlowMemo 的旅行助手，负责在聊天页帮助用户做轻量旅行计划、穿搭、路线、餐厅和记录整理。
 回答要求：
 - 直接、温暖、实用，优先给可执行建议。
-- 如果用户明显是在记录旅行感受，不要改写成长文，只提示已适合写入时间线。
+- 如果用户明显是在记录旅行感受，不要改写成长文，只提示已适合写入 Pocket。
 - 使用中文，避免营销口吻。
 - 旅程目的地：${destination}
-- 日期：${startDate ?? "未知"} 至 ${endDate ?? "未知"}
 - 已有笔记：${noteSummary || "暂无"}`,
       },
       { role: "user", content: message.trim() },

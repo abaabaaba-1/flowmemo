@@ -210,8 +210,6 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
       setIsUpdatingPrompts(true);
       void generatePromptSuggestions({
         destination: journey.destination,
-        startDate: journey.startDate,
-        endDate: journey.endDate,
         messages: messages.map((message) => ({
           role: message.role,
           content: message.content,
@@ -258,8 +256,6 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
       await streamTravelChat({
         message: userText,
         destination: journey?.destination,
-        startDate: journey?.startDate,
-        endDate: journey?.endDate,
         notes: visibleCapsules,
         demoMode: isDemoMode,
         onChunk: (text) => {
