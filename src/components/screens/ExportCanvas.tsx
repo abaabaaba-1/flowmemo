@@ -307,10 +307,10 @@ function LinedHandText({
       style={{
         whiteSpace: "pre-wrap",
         color: "#465660",
-        fontFamily: '"Caveat", cursive',
-        fontSize: "25px",
-        lineHeight: "32px",
-        backgroundImage: `repeating-linear-gradient(transparent, transparent 31px, ${colors.line} 31px, ${colors.line} 32px)`,
+        fontFamily: '"LXGW WenKai", "Ma Shan Zheng", "Kaiti SC", "KaiTi", "STKaiti", cursive',
+        fontSize: "23px",
+        lineHeight: "36px",
+        backgroundImage: `repeating-linear-gradient(transparent, transparent 35px, ${colors.line} 35px, ${colors.line} 36px)`,
         ...style,
       }}
     >
@@ -463,15 +463,13 @@ function PaperVariant({
   journey,
   capsules,
   journalText,
-  activeStyle,
   authorName,
 }: Required<Omit<ExportCanvasProps, "variant">>) {
   const colors = palette.paper;
   const photos = allPhotos(capsules);
   const paragraphs = textLines(journalText, "今天的旅途被慢慢织成一页手账。");
   const keywords = [...new Set(capsules.flatMap((c) => c.keywords ?? []))].slice(0, 7);
-  const leadText = clip(paragraphs[0], 155);
-  const styleLabel = STYLE_LABELS[activeStyle]?.label ?? "手账";
+  const leadText = clip(paragraphs.join(" "), 210);
   const destination = journey?.destination ?? "旅途";
   const leadPhoto = photos[0];
   const secondPhoto = photos[1] ?? photos[0];
@@ -510,12 +508,21 @@ function PaperVariant({
           </div>
         </header>
 
-        <section style={{ position: "relative", minHeight: "508px", marginTop: "22px" }}>
+        <section
+          style={{
+            position: "relative",
+            marginTop: "26px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "24px",
+          }}
+        >
           <div
             style={{
               position: "absolute",
               left: "3px",
-              top: "198px",
+              top: "182px",
               width: "54px",
               height: "48px",
               border: `1px solid ${colors.line}`,
@@ -535,11 +542,11 @@ function PaperVariant({
             LOG
           </div>
 
-          <div style={{ width: "226px", marginLeft: "118px", position: "relative", zIndex: 2 }}>
+          <div style={{ width: "285px", position: "relative", zIndex: 2 }}>
             <Polaroid
               photo={leadPhoto}
               caption={leadPhoto?.location ?? "Crystal clear"}
-              rotate="4deg"
+              rotate="2deg"
               ratio="4 / 5"
               colors={colors}
             />
@@ -550,10 +557,10 @@ function PaperVariant({
             style={{
               position: "relative",
               zIndex: 3,
-              width: "286px",
-              marginTop: "-4px",
-              marginLeft: "20px",
-              transform: "rotate(-1.2deg)",
+              width: "308px",
+              minHeight: "216px",
+              padding: "0 4px 8px",
+              transform: "rotate(-0.6deg)",
             }}
           >
             {leadText}
@@ -568,7 +575,7 @@ function PaperVariant({
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ position: "absolute", right: "68px", bottom: "62px", opacity: 0.65 }}
+            style={{ position: "absolute", right: "18px", bottom: "4px", opacity: 0.55 }}
           >
             <path d="M 24 44 C 24 22, 76 22, 76 44" />
             <path d="M 24 44 C 34 53, 42 45, 50 45 C 58 45, 66 53, 76 44" />
@@ -577,16 +584,9 @@ function PaperVariant({
             <path d="M 66 50 Q 72 69 62 88" />
           </svg>
 
-          <div style={{ position: "absolute", right: "-5px", bottom: "108px", transform: "rotate(92deg)" }}>
-            <span style={{ color: colors.muted, fontFamily: '"Caveat", cursive', fontSize: "16px" }}>
-              fig. 1 / {styleLabel}
-            </span>
-          </div>
-
-          <AudioPill colors={colors} style={{ position: "absolute", left: "74px", right: "0", bottom: "0", zIndex: 5 }} />
         </section>
 
-        <section style={{ position: "relative", marginTop: "20px", minHeight: "300px" }}>
+        <section aria-hidden="true" style={{ display: "none" }}>
           <div style={{ width: "312px", marginLeft: "4px", transform: "rotate(-1deg)" }}>
             <div
               style={{
@@ -648,11 +648,11 @@ function PaperVariant({
           </div>
         </section>
 
-        <div style={{ marginTop: "38px" }}>
+        <div aria-hidden="true" style={{ display: "none" }}>
           <SceneRows capsules={capsules} colors={colors} />
         </div>
 
-        <div style={{ marginTop: "18px" }}>
+        <div aria-hidden="true" style={{ display: "none" }}>
           <KeywordCloud keywords={keywords} colors={colors} />
         </div>
 
