@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Download, Loader2, Share2 } from "lucide-react";
 import { memory, share } from "@eazo/sdk";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import type { Capsule, Journey, StyleKey } from "@/lib/journey-types";
 import { STYLE_LABELS } from "@/lib/journey-types";
 import { DEMO_CAPSULES, DEMO_JOURNEY, DEMO_JOURNAL_TEXT } from "@/lib/demo-data";
 import { getStoredDemoCapsules } from "@/lib/demo-session";
+import { capsuleMatchesTravelDate, dateKeyToDate, resolveDefaultTravelDate, toDateKey } from "@/lib/journey-date";
 import { JournalMode } from "./DailyCanvasJournal";
 import { VlogMode } from "./DailyCanvasVlog";
 import { ExportCanvas } from "./ExportCanvas";
@@ -28,10 +29,18 @@ function hasLiveCapsules(capsules: Capsule[]) {
   return capsules.some((capsule) => String(capsule.id).startsWith("demo-live-"));
 }
 
+function formatTravelDate(dateKey: string, options: Intl.DateTimeFormatOptions) {
+  const date = dateKey ? dateKeyToDate(dateKey) : new Date();
+  return date.toLocaleDateString("zh-CN", options);
+}
+
 export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryTravelDate = toDateKey(searchParams.get("date"));
   const [journey, setJourney] = useState<Journey | null>(null);
   const [capsules, setCapsules] = useState<Capsule[]>([]);
+  const [activeTravelDate, setActiveTravelDate] = useState("");
   const [activeStyle, setActiveStyle] = useState<StyleKey>("cinematic");
   const [mode, setMode] = useState<DisplayMode>("journal");
   const [journalText, setJournalText] = useState("");
@@ -48,21 +57,28 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
     async function load() {
       if (isDemoMode) {
         const storedCapsules = getStoredDemoCapsules();
+        const selectedTravelDate = queryTravelDate || resolveDefaultTravelDate(DEMO_JOURNEY);
         const displayCapsules =
           storedCapsules.length > 0 ? storedCapsules : (DEMO_CAPSULES as unknown as Capsule[]);
+        const visibleCapsules = displayCapsules.filter((capsule) =>
+          capsuleMatchesTravelDate(capsule, selectedTravelDate, DEMO_JOURNEY.startDate)
+        );
         setJourney(DEMO_JOURNEY as unknown as Journey);
-        setCapsules(displayCapsules);
+        setActiveTravelDate(selectedTravelDate);
+        setCapsules(visibleCapsules);
         setJournalText(storedCapsules.length > 0 ? "" : DEMO_JOURNAL_TEXT.cinematic);
         setIsLoading(false);
         return;
       }
 
       try {
-        const [loadedJourney, loadedCapsules] = await Promise.all([
-          getJourneyById(journeyId),
-          getJourneyCapsules(journeyId),
-        ]);
+        const loadedJourney = await getJourneyById(journeyId);
+        const selectedTravelDate = queryTravelDate || resolveDefaultTravelDate(loadedJourney);
+        const loadedCapsules = await getJourneyCapsules(journeyId, {
+          ...(selectedTravelDate ? { travelDate: selectedTravelDate } : {}),
+        });
         setJourney(loadedJourney);
+        setActiveTravelDate(selectedTravelDate);
         setCapsules(loadedCapsules);
       } catch {
         toast.error("加载今日画卷失败");
@@ -72,7 +88,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
     }
 
     void load();
-  }, [journeyId, isDemoMode]);
+  }, [journeyId, isDemoMode, queryTravelDate]);
 
   async function generateJournal(style: StyleKey) {
     if (capsules.length === 0) return;
@@ -94,6 +110,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
       await generateDailyCanvas({
         journeyId,
         style,
+        travelDate: activeTravelDate,
         demoMode: isDemoMode,
         destination: journey?.destination ?? "日本 伊豆",
         capsules,
@@ -111,6 +128,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
               type: "generate_canvas",
               journey_id: journeyId,
               style,
+              travel_date: activeTravelDate,
               capsule_count: capsules.length,
             },
           })
@@ -163,11 +181,10 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
       });
 
       const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      const exportDate = activeTravelDate || new Date().toISOString().slice(0, 10);
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `FlowMemo_${(journey?.destination ?? "旅途").replace(/\s/g, "_")}_${new Date()
-        .toISOString()
-        .slice(0, 10)}.jpg`;
+      link.download = `FlowMemo_${(journey?.destination ?? "旅途").replace(/\s/g, "_")}_${exportDate}.jpg`;
       link.click();
 
       toast.success("今日画卷已保存到本地");
@@ -178,7 +195,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
             content: `用户导出今日画卷图片：${journey?.destination ?? "旅途"}`,
             event_type: "create",
             page: "daily-canvas",
-            metadata: { type: "export_canvas", journey_id: journeyId, style: activeStyle },
+            metadata: { type: "export_canvas", journey_id: journeyId, style: activeStyle, travel_date: activeTravelDate },
           })
           .catch(() => {});
       }
@@ -194,7 +211,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
     const shareText = [
       "【FlowMemo 今日画卷】",
       `Journey: ${journey?.destination ?? "旅途"}`,
-      `Date: ${new Date().toLocaleDateString("zh-CN")}`,
+      `Date: ${formatTravelDate(activeTravelDate, { year: "numeric", month: "long", day: "numeric" })}`,
       `Capsules: ${capsules.length} 枚记忆胶囊`,
       `Style: ${STYLE_LABELS[activeStyle].label}`,
       `Snippet: ${journalText.slice(0, 150)}`,
@@ -217,7 +234,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
             ? [{ type: "image", url: capsules[0].photoUrls[0], caption: "旅途封面照片" }]
             : undefined,
           sourceAppId: process.env.NEXT_PUBLIC_EAZO_APP_ID ?? undefined,
-          targetPath: `/daily-canvas/${journeyId}`,
+          targetPath: `/daily-canvas/${journeyId}${activeTravelDate ? `?date=${activeTravelDate}` : ""}`,
         });
         return;
       } catch {
@@ -267,7 +284,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
               )}
             </h3>
             <p className="font-mono text-[8px] uppercase text-[#8B8174]">
-              {capsules.length} 枚胶囊
+              {activeTravelDate || "今日"} · {capsules.length} 枚胶囊
             </p>
           </div>
         </div>
@@ -307,6 +324,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
                 journalText={journalText}
                 activeStyle={activeStyle}
                 isGenerating={isGenerating}
+                travelDate={activeTravelDate}
               />
             </motion.div>
           ) : (
@@ -327,6 +345,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
           capsules={capsules}
           journalText={journalText}
           activeStyle={activeStyle}
+          travelDate={activeTravelDate}
         />
       </div>
 
@@ -398,6 +417,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
                   journalText={journalText}
                   activeStyle={activeStyle}
                   authorName="旅人"
+                  travelDate={activeTravelDate}
                 />
               </div>
             </div>

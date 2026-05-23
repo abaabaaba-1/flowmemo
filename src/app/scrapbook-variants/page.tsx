@@ -36,6 +36,7 @@ export default function ScrapbookVariantsPage() {
                   activeStyle="healing"
                   authorName="旅人"
                   variant={key}
+                  travelDate="2026-11-08"
                 />
               </div>
             </section>

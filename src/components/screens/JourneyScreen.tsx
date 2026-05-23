@@ -158,7 +158,7 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
           {
             id: "welcome",
             role: "assistant",
-            content: `织流已为你锁定「${tripTitle(demoJourney.destination)}」。你可以在这里问计划，也可以按住底部语音记录旅行感受。第一条有效笔记生成后，智能锦囊会自动出现。`,
+            content: `织流已为你锁定「${tripTitle(demoJourney.destination)}」。你可以在这里问计划，也可以按住底部语音记录旅行感受；快捷记录会帮你把重点写进 Pocket。`,
             timestamp: new Date(),
           },
         ]);
@@ -407,19 +407,23 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
       setNewCapsuleIds((prev) => new Set([...prev, savedCapsule.id]));
       setSelectedPhotoUrls(new Set());
       setIsPocketAwake(true);
+      const confirmationText = photoUrls.length
+        ? manuallySelectedUrls.length
+          ? `已写入 Pocket，并关联了 ${manuallySelectedUrls.length} 张你手选的照片。`
+          : `已写入 Pocket，并从今日照片池里匹配了 ${photoUrls.length} 张相关素材。`
+        : "已写入 Pocket。当前没有找到强相关照片，所以先保留为留白卡片，后续导入相册后可以继续匹配。";
+      toast.success("已写入 Pocket");
       setMessages((prev) => [
         ...prev,
         {
           id: uid("assistant-note"),
           role: "assistant",
-          content: photoUrls.length
-            ? manuallySelectedUrls.length
-              ? `已写入 Pocket，并关联了 ${manuallySelectedUrls.length} 张你手选的照片。`
-              : `已写入 Pocket，并从今日照片池里匹配了 ${photoUrls.length} 张相关素材。`
-            : "已写入 Pocket。当前没有找到强相关照片，所以先保留为留白卡片，后续导入相册后可以继续匹配。",
+          content: confirmationText,
           timestamp: new Date(),
         },
       ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "写入 Pocket 失败，请重试");
     } finally {
       setIsComposingNote(false);
     }

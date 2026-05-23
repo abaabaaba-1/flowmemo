@@ -12,6 +12,43 @@ export function isAllowedImageMimeType(mimeType: unknown): mimeType is string {
   return typeof mimeType === "string" && /^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(mimeType);
 }
 
+function decodeBase64(input: string): Buffer | null {
+  try {
+    const bytes = Buffer.from(input, "base64");
+    if (bytes.length === 0) return null;
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+function hasImageSignature(bytes: Buffer, mimeType: string) {
+  const normalizedMimeType = mimeType.toLowerCase();
+
+  if (/image\/jpe?g/.test(normalizedMimeType)) {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (normalizedMimeType === "image/png") {
+    return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+
+  if (normalizedMimeType === "image/gif") {
+    return bytes.length >= 6 && ["GIF87a", "GIF89a"].includes(bytes.subarray(0, 6).toString("ascii"));
+  }
+
+  if (normalizedMimeType === "image/webp") {
+    return bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP";
+  }
+
+  if (/image\/hei[cf]/.test(normalizedMimeType)) {
+    const brand = bytes.length >= 12 ? bytes.subarray(8, 12).toString("ascii") : "";
+    return bytes.length >= 12 && bytes.subarray(4, 8).toString("ascii") === "ftyp" && ["heic", "heix", "hevc", "hevx", "heif", "mif1", "msf1"].includes(brand);
+  }
+
+  return false;
+}
+
 export function validateImageBase64Payload(input: {
   imageBase64?: unknown;
   mimeType?: unknown;
@@ -32,6 +69,11 @@ export function validateImageBase64Payload(input: {
 
   if (!BASE64_RE.test(imageBase64)) {
     return { ok: false, error: "图片数据格式无效", status: 400 };
+  }
+
+  const bytes = decodeBase64(imageBase64);
+  if (!bytes || !hasImageSignature(bytes, mimeType)) {
+    return { ok: false, error: "图片数据不是有效图片", status: 400 };
   }
 
   return { ok: true, imageBase64, mimeType };

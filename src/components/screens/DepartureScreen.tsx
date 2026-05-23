@@ -48,6 +48,13 @@ function toIsoDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function addDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+const DEFAULT_START_DATE = toIsoDate(new Date());
+const DEFAULT_END_DATE = toIsoDate(addDays(new Date(), 6));
+
 function firstDayOfMonth(value: string) {
   const date = parseIsoDate(value) ?? new Date();
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -119,12 +126,12 @@ function isInRange(value: string, start?: string | null, end?: string | null) {
 export function DepartureScreen() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [startDate, setStartDate] = useState("2026-11-08");
-  const [endDate, setEndDate] = useState("2026-11-14");
-  const [destinationText, setDestinationText] = useState("日本 · 伊豆 · 修善寺 · 东京");
-  const [destinationCountryRegion, setDestinationCountryRegion] = useState("日本");
-  const [destinationCity, setDestinationCity] = useState("伊豆");
-  const [destinationPlace, setDestinationPlace] = useState("修善寺 · 东京");
+  const [startDate, setStartDate] = useState(DEFAULT_START_DATE);
+  const [endDate, setEndDate] = useState(DEFAULT_END_DATE);
+  const [destinationText, setDestinationText] = useState("");
+  const [destinationCountryRegion, setDestinationCountryRegion] = useState("");
+  const [destinationCity, setDestinationCity] = useState("");
+  const [destinationPlace, setDestinationPlace] = useState("");
   const [destinationNote, setDestinationNote] = useState("");
   const [importedName, setImportedName] = useState("");
   const [activeJourney, setActiveJourney] = useState<Journey | null>(null);
@@ -134,7 +141,7 @@ export function DepartureScreen() {
   const [isStandardizingDestination, setIsStandardizingDestination] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [visibleMonth, setVisibleMonth] = useState(() => firstDayOfMonth("2026-11-08"));
+  const [visibleMonth, setVisibleMonth] = useState(() => firstDayOfMonth(DEFAULT_START_DATE));
   const [calendarDraftStart, setCalendarDraftStart] = useState(startDate);
   const [calendarDraftEnd, setCalendarDraftEnd] = useState(endDate);
   const [calendarSelectionStep, setCalendarSelectionStep] = useState<CalendarSelectionStep>("start");

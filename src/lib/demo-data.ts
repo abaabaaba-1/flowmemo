@@ -155,6 +155,8 @@ export const DEMO_CAPSULES = [
     keywords: ["竹林", "溪水", "治愈", "温泉", "古道"],
     photoUrls: [DEMO_PHOTOS.bamboo1, DEMO_PHOTOS.bamboo_upward, DEMO_PHOTOS.bamboo_path_alt],
     photoCount: 3,
+    travelDate: new Date("2026-11-08T12:00:00"),
+    dayNumber: 1,
     capturedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
   },
   {
@@ -169,6 +171,8 @@ export const DEMO_CAPSULES = [
     keywords: ["金枪鱼", "筑地", "美食", "清晨", "仪式感"],
     photoUrls: [DEMO_PHOTOS.sushi],
     photoCount: 1,
+    travelDate: new Date("2026-11-08T12:00:00"),
+    dayNumber: 1,
     capturedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
   },
   {
@@ -183,6 +187,8 @@ export const DEMO_CAPSULES = [
     keywords: ["霓虹", "夜晚", "新宿", "电影感", "倒影"],
     photoUrls: [DEMO_PHOTOS.tokyo_night, DEMO_PHOTOS.shinjuku_rain],
     photoCount: 2,
+    travelDate: new Date("2026-11-08T12:00:00"),
+    dayNumber: 1,
     capturedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
   },
 ];

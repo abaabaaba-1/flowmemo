@@ -23,8 +23,7 @@ export function toDateKey(value: unknown): string {
   if (!value) return "";
 
   if (typeof value === "string") {
-    const dateOnly = value.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (dateOnly) return dateOnly[1];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   }
 
   const date = value instanceof Date ? value : new Date(String(value));
@@ -33,7 +32,7 @@ export function toDateKey(value: unknown): string {
 }
 
 export function dateKeyToDate(dateKey: string): Date {
-  return new Date(`${dateKey}T00:00:00`);
+  return new Date(`${dateKey}T12:00:00`);
 }
 
 export function resolveDefaultTravelDate(journey: JourneyDateRange | null | undefined) {

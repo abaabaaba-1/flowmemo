@@ -4,12 +4,14 @@ import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 import type { Capsule } from "@/lib/journey-types";
 import { STYLE_LABELS, type StyleKey } from "@/lib/journey-types";
+import { dateKeyToDate } from "@/lib/journey-date";
 
 interface JournalModeProps {
   capsules: Capsule[];
   journalText: string;
   activeStyle: StyleKey;
   isGenerating: boolean;
+  travelDate?: string;
 }
 
 interface ScrapPhoto {
@@ -39,12 +41,16 @@ function paragraphList(journalText: string) {
     .filter(Boolean);
 }
 
-function monthLabel() {
-  return new Date().toLocaleString("en-US", { month: "short" }).toUpperCase();
+function displayDate(travelDate?: string) {
+  return travelDate ? dateKeyToDate(travelDate) : new Date();
 }
 
-function dayLabel() {
-  return new Date().toLocaleString("en-US", { day: "2-digit" });
+function monthLabel(travelDate?: string) {
+  return displayDate(travelDate).toLocaleString("en-US", { month: "short" }).toUpperCase();
+}
+
+function dayLabel(travelDate?: string) {
+  return displayDate(travelDate).toLocaleString("en-US", { day: "2-digit" });
 }
 
 function WashiTape({
@@ -202,12 +208,14 @@ function HeroScrapbook({
   capsules,
   activeStyle,
   isGenerating,
+  travelDate,
 }: {
   coverPhotos: ScrapPhoto[];
   paragraphs: string[];
   capsules: Capsule[];
   activeStyle: StyleKey;
   isGenerating: boolean;
+  travelDate?: string;
 }) {
   const heroText =
     paragraphs[0] ||
@@ -221,8 +229,8 @@ function HeroScrapbook({
     <section className="px-2 pt-3 text-[#2C2B29]" style={journalFont}>
       <div className="mb-5 flex items-center gap-3">
         <div className="flex h-12 w-12 rotate-[-5deg] flex-col items-center justify-center rounded-full border-2 border-[#8BA6B6] text-[#8BA6B6] opacity-80">
-          <span className="mt-1 text-xs font-bold leading-none">{monthLabel()}</span>
-          <span className="text-lg font-bold leading-none">{dayLabel()}</span>
+          <span className="mt-1 text-xs font-bold leading-none">{monthLabel(travelDate)}</span>
+          <span className="text-lg font-bold leading-none">{dayLabel(travelDate)}</span>
         </div>
         <div className="min-w-0 flex-1 rotate-[1deg] text-[27px] leading-none text-[#576064]" style={handFont}>
           FlowMemo memories...
@@ -389,7 +397,7 @@ function SceneScrap({ capsule, index }: { capsule: Capsule; index: number }) {
   );
 }
 
-export function JournalMode({ capsules, journalText, activeStyle, isGenerating }: JournalModeProps) {
+export function JournalMode({ capsules, journalText, activeStyle, isGenerating, travelDate }: JournalModeProps) {
   const photos = allPhotos(capsules);
   const coverPhotos = photos.slice(0, 4);
   const paragraphs = paragraphList(journalText);
@@ -402,6 +410,7 @@ export function JournalMode({ capsules, journalText, activeStyle, isGenerating }
         capsules={capsules}
         activeStyle={activeStyle}
         isGenerating={isGenerating}
+        travelDate={travelDate}
       />
       <MemoryThread paragraphs={paragraphs} isGenerating={isGenerating} />
       <div className="px-2">

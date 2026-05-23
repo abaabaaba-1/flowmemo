@@ -4,11 +4,12 @@ import { forwardRef } from "react";
 import type { CSSProperties } from "react";
 import type { Capsule, Journey, StyleKey } from "@/lib/journey-types";
 import { STYLE_LABELS } from "@/lib/journey-types";
+import { dateKeyToDate } from "@/lib/journey-date";
 
 export type ExportCanvasVariant = "paper" | "aqua" | "editorial";
 
 export const EXPORT_CANVAS_VARIANTS: { key: ExportCanvasVariant; label: string }[] = [
-  { key: "paper", label: "轻盈拼贴" },
+  { key: "paper", label: "复古拼贴" },
   { key: "aqua", label: "蓝白旅行本" },
   { key: "editorial", label: "杂志手帐" },
 ];
@@ -20,7 +21,13 @@ interface ExportCanvasProps {
   activeStyle: StyleKey;
   authorName?: string;
   variant?: ExportCanvasVariant;
+  travelDate?: string;
 }
+
+type ExportCanvasVariantProps = Omit<ExportCanvasProps, "variant"> & {
+  authorName: string;
+  travelDate: string;
+};
 
 type Photo = {
   url: string;
@@ -95,20 +102,24 @@ function clip(value: string | null | undefined, length: number) {
   return text.length > length ? `${text.slice(0, length)}...` : text;
 }
 
-function monthShort() {
-  return new Date().toLocaleString("en-US", { month: "short" }).toUpperCase();
+function displayDate(travelDate: string) {
+  return travelDate ? dateKeyToDate(travelDate) : new Date();
 }
 
-function dayNumber() {
-  return new Date().toLocaleString("en-US", { day: "2-digit" });
+function monthShort(travelDate: string) {
+  return displayDate(travelDate).toLocaleString("en-US", { month: "short" }).toUpperCase();
 }
 
-function monthDay() {
-  return new Date().toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
+function dayNumber(travelDate: string) {
+  return displayDate(travelDate).toLocaleString("en-US", { day: "2-digit" });
 }
 
-function fullDate() {
-  return new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+function monthDay(travelDate: string) {
+  return displayDate(travelDate).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
+}
+
+function fullDate(travelDate: string) {
+  return displayDate(travelDate).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
 }
 
 function CanvasShell({ colors, children }: { colors: Colors; children: React.ReactNode }) {
@@ -319,7 +330,7 @@ function LinedHandText({
   );
 }
 
-function DateCircle({ colors }: { colors: Colors }) {
+function DateCircle({ colors, travelDate }: { colors: Colors; travelDate: string }) {
   return (
     <div
       style={{
@@ -337,8 +348,8 @@ function DateCircle({ colors }: { colors: Colors }) {
         flexShrink: 0,
       }}
     >
-      <span style={{ fontSize: "10px", fontWeight: 700 }}>{monthShort()}</span>
-      <span style={{ fontSize: "17px", fontWeight: 700 }}>{dayNumber()}</span>
+      <span style={{ fontSize: "10px", fontWeight: 700 }}>{monthShort(travelDate)}</span>
+      <span style={{ fontSize: "17px", fontWeight: 700 }}>{dayNumber(travelDate)}</span>
     </div>
   );
 }
@@ -367,7 +378,7 @@ function KeywordCloud({ keywords, colors }: { keywords: string[]; colors: Colors
   );
 }
 
-function Footer({ colors, authorName }: { colors: Colors; authorName: string }) {
+function Footer({ colors, authorName, travelDate }: { colors: Colors; authorName: string; travelDate: string }) {
   return (
     <footer
       style={{
@@ -385,7 +396,7 @@ function Footer({ colors, authorName }: { colors: Colors; authorName: string }) 
           woven by FlowMemo AI
         </p>
         <p style={{ margin: 0, fontSize: "12px" }}>
-          {authorName} · {fullDate()}
+          {authorName} · {fullDate(travelDate)}
         </p>
       </div>
       <div style={{ display: "flex", gap: "4px" }}>
@@ -459,12 +470,15 @@ function SceneRows({ capsules, colors, compact = false }: { capsules: Capsule[];
   );
 }
 
+// Kept as a reference layout while the paper option uses VintageCollageVariant.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PaperVariant({
   journey,
   capsules,
   journalText,
   authorName,
-}: Required<Omit<ExportCanvasProps, "variant">>) {
+  travelDate,
+}: ExportCanvasVariantProps) {
   const colors = palette.paper;
   const photos = allPhotos(capsules);
   const paragraphs = textLines(journalText, "今天的旅途被慢慢织成一页手账。");
@@ -488,7 +502,7 @@ function PaperVariant({
       >
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <DateCircle colors={colors} />
+            <DateCircle colors={colors} travelDate={travelDate} />
             <div
               style={{
                 color: "#40515B",
@@ -656,7 +670,7 @@ function PaperVariant({
           <KeywordCloud keywords={keywords} colors={colors} />
         </div>
 
-        <Footer colors={colors} authorName={authorName} />
+        <Footer colors={colors} authorName={authorName} travelDate={travelDate} />
       </div>
     </CanvasShell>
   );
@@ -668,7 +682,8 @@ function AquaVariant({
   journalText,
   activeStyle,
   authorName,
-}: Required<Omit<ExportCanvasProps, "variant">>) {
+  travelDate,
+}: ExportCanvasVariantProps) {
   const colors = palette.aqua;
   const photos = allPhotos(capsules);
   const paragraphs = textLines(journalText, "今天的照片、声音和感受被收进一页轻盈的旅行本。");
@@ -679,7 +694,7 @@ function AquaVariant({
       <div style={{ padding: "24px 20px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <DateCircle colors={colors} />
+            <DateCircle colors={colors} travelDate={travelDate} />
             <span style={{ color: colors.accent, fontSize: "11px", fontWeight: 800, letterSpacing: "0.18em" }}>
               FLOWMEMO
             </span>
@@ -691,7 +706,7 @@ function AquaVariant({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", alignItems: "end" }}>
             <div>
               <p style={{ margin: "0 0 12px", color: colors.muted, fontSize: "11px", letterSpacing: "0.18em" }}>
-                TRAVEL LOG / {monthDay()}
+                TRAVEL LOG / {monthDay(travelDate)}
               </p>
               <h1
                 style={{
@@ -731,7 +746,7 @@ function AquaVariant({
               <div style={{ background: colors.accentSoft, padding: "12px", textAlign: "center", transform: "rotate(-2deg)" }}>
                 <p style={{ margin: "0 0 5px", color: colors.muted, fontSize: "9px", letterSpacing: "0.18em" }}>DATE</p>
                 <p style={{ margin: 0, color: colors.ink, fontFamily: '"Caveat", cursive', fontSize: "24px", lineHeight: 1 }}>
-                  {monthDay()}
+                  {monthDay(travelDate)}
                 </p>
               </div>
             </div>
@@ -744,7 +759,7 @@ function AquaVariant({
         <div style={{ marginTop: "18px" }}>
           <KeywordCloud keywords={keywords} colors={colors} />
         </div>
-        <Footer colors={colors} authorName={authorName} />
+        <Footer colors={colors} authorName={authorName} travelDate={travelDate} />
       </div>
     </CanvasShell>
   );
@@ -756,7 +771,8 @@ function EditorialVariant({
   journalText,
   activeStyle,
   authorName,
-}: Required<Omit<ExportCanvasProps, "variant">>) {
+  travelDate,
+}: ExportCanvasVariantProps) {
   const colors = palette.editorial;
   const photos = allPhotos(capsules);
   const paragraphs = textLines(journalText, "今天的旅程被整理成一份温柔的旅行剪报。");
@@ -809,7 +825,7 @@ function EditorialVariant({
               <div style={{ background: colors.accentSoft, padding: "12px", textAlign: "center", transform: "rotate(-2deg)" }}>
                 <p style={{ margin: "0 0 5px", color: colors.muted, fontSize: "9px", letterSpacing: "0.18em" }}>DATE</p>
                 <p style={{ margin: 0, color: colors.ink, fontFamily: '"Caveat", cursive', fontSize: "24px", lineHeight: 1 }}>
-                  {monthDay()}
+                  {monthDay(travelDate)}
                 </p>
               </div>
             </div>
@@ -826,19 +842,209 @@ function EditorialVariant({
         <div style={{ marginTop: "18px" }}>
           <KeywordCloud keywords={keywords} colors={colors} />
         </div>
-        <Footer colors={colors} authorName={authorName} />
+        <Footer colors={colors} authorName={authorName} travelDate={travelDate} />
+      </div>
+    </CanvasShell>
+  );
+}
+
+function VintageCollageVariant({
+  journey,
+  capsules,
+  journalText,
+  authorName,
+  travelDate,
+}: ExportCanvasVariantProps) {
+  const colors = palette.paper;
+  const photos = allPhotos(capsules);
+  const photoAt = (index: number) => photos[index % Math.max(photos.length, 1)];
+  const keywords = [...new Set(capsules.flatMap((c) => c.keywords ?? []))].slice(0, 4);
+  const noteText = clip(
+    capsules[0]?.userRawText || capsules[0]?.aiContent || journalText || "把旅途里的碎片慢慢贴成一页。",
+    88
+  );
+  const destination = clip(journey?.destination ?? "旅途", 13);
+
+  return (
+    <CanvasShell colors={colors}>
+      <div
+        style={{
+          position: "relative",
+          height: "690px",
+          overflow: "hidden",
+          background: "#FAF5EA",
+          boxShadow: "inset 0 0 0 1px rgba(207,194,169,.42)",
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 186,
+            top: 18,
+            bottom: 18,
+            width: 1,
+            background: "rgba(202,190,166,.48)",
+          }}
+        />
+        <div style={{ position: "absolute", left: 24, top: 24, zIndex: 10 }}>
+          <DateCircle colors={colors} travelDate={travelDate} />
+        </div>
+        <p
+          style={{
+            position: "absolute",
+            right: 24,
+            top: 35,
+            margin: 0,
+            color: "#8B8376",
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+          }}
+        >
+          memory log
+        </p>
+
+        <div style={{ position: "absolute", left: 46, top: 92, width: 105, height: 128, background: "#E8DED0", transform: "rotate(-2deg)" }} />
+        <Polaroid photo={photoAt(0)} caption={photoAt(0)?.location ?? "memory"} rotate="-3deg" ratio="1 / 1" colors={colors} style={{ position: "absolute", left: 34, top: 116, width: 116, zIndex: 5 }} />
+        <Tape colors={colors} variant="cream" style={{ left: 24, top: 105, transform: "rotate(-8deg)", zIndex: 8 }} />
+
+        <div
+          style={{
+            position: "absolute",
+            left: 112,
+            top: 152,
+            width: 112,
+            padding: 8,
+            background: "#171A1D",
+            boxShadow: "0 9px 18px rgba(43,34,24,.18)",
+            transform: "rotate(1.5deg)",
+            zIndex: 4,
+          }}
+        >
+          <p style={{ margin: "0 0 4px", color: "#BDAF8E", fontSize: 7, letterSpacing: ".16em" }}>FILM SCAN</p>
+          <div style={{ aspectRatio: "4 / 5", overflow: "hidden", background: "#DDD6C9" }}>
+            {photoAt(1) && <img src={photoAt(1).url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.88) contrast(.97)" }} />}
+          </div>
+          <p style={{ margin: "5px 0 0", color: "#CDBB93", fontSize: 7, letterSpacing: ".12em" }}>LIFELOG / ISO 800</p>
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            left: 31,
+            top: 304,
+            width: 123,
+            color: "#3F3B35",
+            fontFamily: '"LXGW WenKai", "Ma Shan Zheng", "Kaiti SC", "KaiTi", cursive',
+            fontSize: 15,
+            lineHeight: "24px",
+            transform: "rotate(-1.3deg)",
+            backgroundImage: "repeating-linear-gradient(transparent, transparent 23px, rgba(86,82,70,.38) 23px, rgba(86,82,70,.38) 24px)",
+            zIndex: 8,
+          }}
+        >
+          {noteText}
+        </div>
+
+        <div style={{ position: "absolute", left: 61, bottom: 98, width: 126, height: 150, overflow: "hidden", background: "#D7D0C2", transform: "rotate(-1.8deg)", zIndex: 2 }}>
+          {photoAt(2) && <img src={photoAt(2).url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.78) contrast(.94)" }} />}
+        </div>
+        <Polaroid photo={photoAt(3)} caption={photoAt(3)?.location ?? "detail"} rotate="3deg" ratio="4 / 3" colors={colors} style={{ position: "absolute", left: 110, bottom: 92, width: 118, zIndex: 6 }} />
+
+        <div style={{ position: "absolute", right: 38, top: 93, width: 124, height: 210, background: "rgba(214,207,190,.65)", transform: "rotate(-1deg)", zIndex: 1 }} />
+        <div style={{ position: "absolute", right: 28, top: 124, width: 120, height: 142, overflow: "hidden", background: "#DDD6C9", border: "1px solid rgba(255,255,255,.88)", boxShadow: "0 8px 17px rgba(43,34,24,.14)", transform: "rotate(-2deg)", zIndex: 5 }}>
+          {photoAt(4) && <img src={photoAt(4).url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.9) contrast(.95)" }} />}
+        </div>
+        <Tape colors={colors} variant="dot" style={{ right: 70, top: 111, transform: "rotate(4deg)", zIndex: 9 }} />
+
+        <div style={{ position: "absolute", right: 82, top: 288, width: 86, padding: 6, background: "#202020", transform: "rotate(-3deg)", zIndex: 7, boxShadow: "0 7px 14px rgba(43,34,24,.16)" }}>
+          <div style={{ aspectRatio: "3 / 4", overflow: "hidden", background: "#DDD6C9" }}>
+            {photoAt(5) && <img src={photoAt(5).url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.82)" }} />}
+          </div>
+          <div style={{ height: 18, background: "#FAF5EA", marginTop: 5 }} />
+        </div>
+        <div style={{ position: "absolute", right: 29, bottom: 116, width: 124, height: 118, overflow: "hidden", background: "#DDD6C9", boxShadow: "0 6px 14px rgba(43,34,24,.13)", zIndex: 4 }}>
+          {photoAt(6) && <img src={photoAt(6).url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.82) contrast(.96)" }} />}
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            right: 109,
+            bottom: 204,
+            width: 70,
+            height: 78,
+            border: "1px solid rgba(104,98,84,.45)",
+            background: "rgba(255,252,244,.88)",
+            transform: "rotate(-1deg)",
+            zIndex: 8,
+            textAlign: "center",
+            color: "#595349",
+            fontFamily: '"Caveat", "Kaiti SC", cursive',
+            fontSize: 16,
+            lineHeight: 1.25,
+            paddingTop: 10,
+          }}
+        >
+          {destination}
+          <br />
+          {monthDay(travelDate)}
+        </div>
+
+        <p style={{ position: "absolute", left: 55, bottom: 27, margin: 0, color: "#9A9284", fontSize: 9, letterSpacing: "0.16em", lineHeight: 1.6 }}>
+          /slow
+          <br />
+          /travel
+          <br />
+          /memory
+        </p>
+        <div style={{ position: "absolute", left: 134, bottom: 36, borderRadius: "50%", background: "rgba(232,226,214,.92)", color: "#4B4740", transform: "rotate(-3deg)", fontFamily: '"LXGW WenKai", "Ma Shan Zheng", "Kaiti SC", cursive', fontSize: 20, padding: "9px 19px", zIndex: 10 }}>
+          旅行一页
+        </div>
+        <div style={{ position: "absolute", right: 30, bottom: 30, display: "flex", gap: 5, zIndex: 10 }}>
+          {keywords.map((keyword) => (
+            <span key={keyword} style={{ border: "1px solid rgba(129,121,104,.32)", color: "#827969", background: "rgba(255,255,255,.7)", borderRadius: 10, padding: "3px 7px", fontSize: 8, fontWeight: 800 }}>
+              {keyword}
+            </span>
+          ))}
+        </div>
+
+        <svg width="70" height="62" viewBox="0 0 70 62" style={{ position: "absolute", left: 24, top: 219, zIndex: 8, opacity: 0.46 }}>
+          <g fill="none" stroke="#7C8478" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 18c8-10 18-10 28 0-8 10-18 10-28 0Z" />
+            <path d="M46 18l9-6v12l-9-6Z" />
+            <path d="M22 44c6-12 18-12 24 0" />
+            <path d="M27 45c-4 5-7 7-11 8" />
+            <path d="M39 45c4 5 7 7 11 8" />
+            <path d="M33 45v12" />
+          </g>
+        </svg>
+        <svg width="76" height="70" viewBox="0 0 76 70" style={{ position: "absolute", right: 22, top: 35, zIndex: 8, opacity: 0.42 }}>
+          <g fill="none" stroke="#8B8376" strokeWidth="1.1" strokeLinecap="round">
+            {[0, 1, 2, 3].map((row) =>
+              [0, 1, 2, 3].map((col) => <circle key={`${row}-${col}`} cx={10 + col * 13} cy={10 + row * 12} r="3" />)
+            )}
+            <path d="M64 8c7 9 7 17 0 26-7-9-7-17 0-26Z" />
+            <path d="M65 43c5 6 5 12 0 18-5-6-5-12 0-18Z" />
+          </g>
+        </svg>
+        <p style={{ position: "absolute", right: 25, bottom: 14, margin: 0, color: "#AAA193", fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase" }}>
+          {authorName} / FlowMemo
+        </p>
       </div>
     </CanvasShell>
   );
 }
 
 export const ExportCanvas = forwardRef<HTMLDivElement, ExportCanvasProps>(
-  ({ journey, capsules, journalText, activeStyle, authorName = "旅人", variant = "paper" }, ref) => {
-    const props = { journey, capsules, journalText, activeStyle, authorName };
+  ({ journey, capsules, journalText, activeStyle, authorName = "旅人", variant = "paper", travelDate = "" }, ref) => {
+    const props = { journey, capsules, journalText, activeStyle, authorName, travelDate };
 
     return (
       <div ref={ref}>
-        {variant === "paper" && <PaperVariant {...props} />}
+        {variant === "paper" && <VintageCollageVariant {...props} />}
         {variant === "aqua" && <AquaVariant {...props} />}
         {variant === "editorial" && <EditorialVariant {...props} />}
       </div>

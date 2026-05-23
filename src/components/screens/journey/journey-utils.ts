@@ -9,6 +9,7 @@ export type PhotoAsset = DemoPhotoAsset;
 export interface PocketEvent {
   id: string;
   capsuleId: string;
+  dayNumber?: number | null;
   type: CapsuleEventType;
   timestamp: Date;
   title: string;
@@ -139,6 +140,7 @@ export function buildPocketEvents(capsules: Capsule[]): PocketEvent[] {
     const text = capsule.userRawText || capsule.aiContent || "";
     const shared = {
       capsuleId: capsule.id,
+      dayNumber: capsule.dayNumber,
       timestamp,
       title: capsule.title,
       keywords,

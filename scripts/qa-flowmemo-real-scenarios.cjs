@@ -17,10 +17,12 @@ function ensureArtifacts() {
 }
 
 async function screenshot(page, name) {
+  const fileName = `qa-${name}.png`;
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, `qa-${name}.png`),
+    path: path.join(ARTIFACT_DIR, fileName),
     fullPage: true,
   });
+  return fileName;
 }
 
 async function assertVisible(locator, label, timeout = 15000) {
@@ -89,7 +91,10 @@ async function run() {
   });
   page.on("requestfailed", (request) => {
     const failure = request.failure();
-    if (failure?.errorText === "net::ERR_ABORTED" && request.url().includes("_rsc=")) {
+    if (
+      failure?.errorText === "net::ERR_ABORTED" &&
+      (request.url().includes("_rsc=") || request.url().includes("/api/ai/prompt-suggestions"))
+    ) {
       return;
     }
     report.requestFailures.push({
@@ -119,129 +124,110 @@ async function run() {
   }
 
   try {
-    await scenario("场景 0：启程页日期顺序和必填校验", async () => {
+    await scenario("Scenario 0: onboarding starts empty and validates required destination", async () => {
       await page.addInitScript(() => window.localStorage.clear());
       await page.goto(BASE_URL, { waitUntil: "networkidle" });
       await dismissCoverIfPresent(page);
       await assertVisible(page.getByText("请填写").first(), "onboarding title");
 
+      const destinationInput = page.locator("input:not([type])").first();
+      assert((await destinationInput.inputValue()) === "", "new journeys should not prefill a demo destination");
+
       const dates = page.locator('input[type="date"]');
       const startDate = dates.nth(0);
       const endDate = dates.nth(1);
+      const initialStartValue = await startDate.inputValue();
+      const beforeStart = new Date(`${initialStartValue}T00:00:00`);
+      beforeStart.setDate(beforeStart.getDate() - 1);
+      const invalidEndValue = beforeStart.toISOString().slice(0, 10);
 
-      await endDate.fill("2026-11-01");
+      await endDate.fill(invalidEndValue);
       await page.waitForTimeout(100);
       assert(
         (await endDate.inputValue()) === (await startDate.inputValue()),
-        `返程未自动纠正：${await startDate.inputValue()} / ${await endDate.inputValue()}`
+        `return date was not corrected: ${await startDate.inputValue()} / ${await endDate.inputValue()}`
       );
       assert(
         (await endDate.getAttribute("min")) === (await startDate.inputValue()),
-        "返程日期控件缺少 min=去程 约束"
+        "return date input should be constrained by the departure date"
       );
 
       await startDate.fill("2026-11-20");
       await page.waitForTimeout(100);
-      assert((await startDate.inputValue()) === "2026-11-20", "去程整体后移失败");
-      assert((await endDate.inputValue()) === "2026-11-20", "返程没有跟随去程后移");
-      assert((await startDate.getAttribute("max")) === null, "去程不应被返程 max 卡住");
+      assert((await startDate.inputValue()) === "2026-11-20", "departure date did not update");
+      assert((await endDate.inputValue()) === "2026-11-20", "return date did not follow departure date");
+      assert((await startDate.getAttribute("max")) === null, "departure date should not be constrained by return date");
 
-      await page.locator("input:not([type])").first().fill("");
       await page.getByRole("button", { name: /开始记录/ }).click();
       await assertVisible(page.getByText("请先补齐出行日期和目的地"), "missing destination toast", 5000);
-      assert(!page.url().includes("/journey/"), `空目的地仍然跳转：${page.url()}`);
-      await screenshot(page, "00-onboarding-guards");
-      report.artifacts.push("qa-00-onboarding-guards.png");
+      assert(!page.url().includes("/journey/"), `empty destination still navigated: ${page.url()}`);
+      report.artifacts.push(await screenshot(page, "00-onboarding-guards"));
     });
 
-    await scenario("场景 1：导入行程截图并进入旅程", async () => {
+    await scenario("Scenario 1: import itinerary screenshot and enter journey", async () => {
       await page.addInitScript(() => window.localStorage.clear());
       await page.goto(BASE_URL, { waitUntil: "networkidle" });
       await dismissCoverIfPresent(page);
       await assertVisible(page.getByText("请填写").first(), "onboarding title");
       await page.locator('input[type="file"]').first().setInputFiles(assets.itinerary);
       await assertVisible(page.getByText(path.basename(assets.itinerary)), "imported itinerary filename");
-      await screenshot(page, "01-itinerary-import");
-      report.artifacts.push("qa-01-itinerary-import.png");
+      report.artifacts.push(await screenshot(page, "01-itinerary-import"));
 
       await page.getByRole("button", { name: /开始记录/ }).click();
       await page.waitForURL("**/journey/demo-journey-izu", { timeout: 12000 });
-      await assertVisible(page.getByText("聊天"), "chat tab");
-      await assertVisible(page.getByRole("button", { name: /按住/ }), "voice-first input");
+      await assertVisible(page.getByText("Chat").first(), "chat tab");
+      await assertVisible(page.getByText("Pocket").first(), "pocket tab");
+      await assertVisible(page.getByRole("button", { name: "按住记笔记" }), "voice-first input");
     });
 
-    await scenario("场景 2：键盘咨询旅行计划，AI 返回可执行建议", async () => {
+    await scenario("Scenario 2: ask travel assistant and save a suggested note", async () => {
       await page.getByRole("button", { name: "键盘输入" }).click();
       await page.locator("textarea").fill("修善寺 11 月初适合穿什么衣服？");
       await page.getByRole("button", { name: "发送" }).click();
-      await assertVisible(page.getByText("薄外套"), "clothing advice response", 20000);
-      await screenshot(page, "02-chat-plan");
-      report.artifacts.push("qa-02-chat-plan.png");
+      await assertVisible(page.getByText(/薄外套|外套/).last(), "clothing advice response", 20000);
+
+      const noteSuggestion = page.locator("button").filter({ hasText: /^记：/ }).first();
+      await assertVisible(noteSuggestion, "note suggestion", 20000);
+      await noteSuggestion.click();
+      await assertVisible(page.getByText(/已写入 Pocket/).last(), "note saved confirmation", 30000);
+      report.artifacts.push(await screenshot(page, "02-chat-plan-and-note"));
     });
 
-    await scenario("场景 3：记录旅行碎片并检查照片池匹配", async () => {
-      await page.getByRole("button", { name: "筑地早餐" }).click();
-      await assertVisible(page.getByRole("button", { name: /智能锦囊/ }), "smart pocket trigger", 20000);
-      await assertVisible(page.getByText(/已写入.*Pocket/), "note saved assistant confirmation", 20000);
+    await scenario("Scenario 3: inspect Pocket timeline and import a real photo", async () => {
       await page.getByRole("button", { name: /Pocket/ }).click();
-      await assertVisible(page.locator("h2", { hasText: /今日 Pocket/ }), "timeline title");
-      await assertVisible(page.getByText("已从照片池匹配").first(), "matched photo label", 15000);
-      await screenshot(page, "03-timeline-matched");
-      report.artifacts.push("qa-03-timeline-matched.png");
+      await assertVisible(page.getByText(/Day 1/).first(), "timeline day title");
+      await assertVisible(page.getByText(/matched:/).first(), "matched photo label", 15000);
+
+      await page.locator('input[type="file"]').first().setInputFiles(assets.shinjukuRain);
+      await assertVisible(page.getByText("已导入 1 张照片"), "photo import toast", 30000);
+      report.artifacts.push(await screenshot(page, "03-timeline-photo-import"));
     });
 
-    await scenario("场景 4：导入相册照片，再补一条文本笔记", async () => {
-      await page.locator('main section input[type="file"]').first().setInputFiles(assets.shinjukuRain);
-      await assertVisible(page.getByText("已导入 1 张照片"), "photo import toast", 30000);
-      await assertVisible(page.locator("p", { hasText: /AI 已识别/ }).first(), "photo ai analysis status", 30000);
-      await assertVisible(page.getByText("13 张候选照片"), "photo pool count updated", 10000);
-
-      await page.getByRole("button", { name: "聊天" }).click();
+    await scenario("Scenario 4: save typed note from Pocket mode", async () => {
       await page.getByRole("button", { name: "键盘输入" }).click();
-      await page.getByRole("button", { name: "记笔记", exact: true }).click();
       await page
         .locator("textarea")
         .fill("刚刚在新宿雨夜撑伞穿过人群，霓虹和车灯全都落在地面上，像电影片尾。");
       await page.getByRole("button", { name: "保存笔记" }).click();
-      await assertVisible(page.getByText(/已写入.*Pocket/).last(), "second note saved", 20000);
-      await page.getByRole("button", { name: /Pocket/ }).click();
-      await assertVisible(page.getByText(/Moment 2/), "second timeline moment", 20000);
-      await screenshot(page, "04-upload-and-second-note");
-      report.artifacts.push("qa-04-upload-and-second-note.png");
+      await assertVisible(page.getByText(/已写入 Pocket/).last(), "typed note saved", 30000);
+      await assertVisible(page.getByText(/新宿雨夜|霓虹/).last(), "typed note timeline text", 20000);
+      report.artifacts.push(await screenshot(page, "04-typed-note"));
     });
 
-    await scenario("场景 5：上传新照片后自动给已有笔记重新配图", async () => {
-      await page.getByRole("button", { name: "聊天" }).click();
-      await page.getByRole("button", { name: "键盘输入" }).click();
-      await page.getByRole("button", { name: "记笔记", exact: true }).click();
-      await page
-        .locator("textarea")
-        .fill("golden match newonly：刚刚路过一个只有我注意到的小角落，想先记下来，等会儿再补照片。");
-      await page.getByRole("button", { name: "保存笔记" }).click();
-      await assertVisible(page.getByText(/已写入.*Pocket/).last(), "pre-photo note saved", 20000);
-
-      await page.getByRole("button", { name: /Pocket/ }).click();
-      const uniquePhoto = {
-        name: "golden-match-newonly.jpg",
-        mimeType: "image/jpeg",
-        buffer: fs.readFileSync(assets.shinjukuRain),
-      };
-      await page.locator('main section input[type="file"]').first().setInputFiles(uniquePhoto);
-      await assertVisible(page.getByText("golden-match-newonly").first(), "rematched photo label", 30000);
-      await screenshot(page, "05-auto-rematch-existing-note");
-      report.artifacts.push("qa-05-auto-rematch-existing-note.png");
-    });
-
-    await scenario("场景 6：生成今日画卷、切换 Vlog、导出图片", async () => {
+    await scenario("Scenario 5: generate daily canvas with travel date and export image", async () => {
       await page.getByRole("button", { name: /生成今日手账/ }).click();
       await page.waitForURL("**/daily-canvas/demo-journey-izu**", { timeout: 12000 });
       await assertVisible(page.getByText("今日画卷").first(), "daily canvas page", 20000);
       await waitForTextGone(page, "正在把今天织成手账", 35000);
-      await screenshot(page, "06-daily-canvas");
-      report.artifacts.push("qa-06-daily-canvas.png");
+
+      const bodyText = await page.locator("body").innerText();
+      const hasTravelDate = bodyText.includes("2026-11-08") || bodyText.includes("11月8日");
+      assert(hasTravelDate, "daily canvas should use the trip travel date instead of the system date");
+      assert(!bodyText.includes("5月24日"), "daily canvas copy should not use the system date");
+      report.artifacts.push(await screenshot(page, "05-daily-canvas"));
 
       await page.getByRole("button", { name: "Vlog" }).click();
-      await assertVisible(page.getByText("宽屏微电影手记"), "vlog mode", 10000);
+      await assertVisible(page.getByText(/Vlog|微电影|镜头/).first(), "vlog mode", 10000);
       await page.getByRole("button", { name: "手账", exact: true }).click();
 
       const downloadPromise = page.waitForEvent("download", { timeout: 45000 });

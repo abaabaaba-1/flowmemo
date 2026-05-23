@@ -40,13 +40,13 @@ export function CoverScreen({ onStart }: CoverScreenProps) {
             className="mt-[72px] flex flex-col items-center gap-2.5 text-center sm:mt-[82px]"
           >
             <h1
-              className="m-0 text-[clamp(4.45rem,19vw,5rem)] font-normal leading-[0.9] tracking-normal text-[#43556B]"
-              style={{ fontFamily: '"Brush Script MT", "Segoe Script", Georgia, serif' }}
+              className="m-0 text-[clamp(3.25rem,15vw,4.15rem)] font-semibold leading-[0.95] tracking-normal text-[#43556B]"
+              style={{ fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif' }}
             >
-              Conch
+              FlowMemo
             </h1>
             <p className="m-0 text-[0.94rem] font-medium tracking-[0.23em] text-[#43556B]/80">
-              定制旅行记忆，记录遇见的每一刻
+              织流 · AI 旅行记忆导演
             </p>
           </motion.div>
 

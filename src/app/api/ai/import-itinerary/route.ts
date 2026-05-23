@@ -52,16 +52,16 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return auth.response;
   }
 
-  if (demoMode) {
-    return NextResponse.json(fallbackImport());
-  }
-
   const imageValidation = validateImageBase64Payload({ imageBase64, mimeType });
   if (!imageValidation.ok) {
     return NextResponse.json(
       { error: imageValidation.error },
       { status: imageValidation.status }
     );
+  }
+
+  if (demoMode) {
+    return NextResponse.json(fallbackImport());
   }
 
   if (!process.env.EAZO_PRIVATE_KEY || process.env.AI_PROVIDER === "deepseek") {

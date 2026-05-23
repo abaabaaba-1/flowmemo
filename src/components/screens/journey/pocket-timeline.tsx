@@ -159,7 +159,7 @@ export function PocketTimeline({
                 <div className="absolute left-[30px] top-2 h-1.5 w-1.5 rounded-full bg-slate-300" />
                 <div className="ml-6">
                   <div className="mb-2 text-[13px] font-medium uppercase tracking-wide text-slate-400">
-                    {event.type === "audio" ? "Voice" : timeText(event.timestamp)}
+                    Day {event.dayNumber ?? 1} · {event.type === "audio" ? "Voice" : timeText(event.timestamp)}
                   </div>
 
                   {event.type === "text" && (

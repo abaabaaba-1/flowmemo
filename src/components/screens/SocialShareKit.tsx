@@ -4,12 +4,14 @@ import { Clipboard, Film, MessageCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { Capsule, Journey, StyleKey } from "@/lib/journey-types";
 import { STYLE_LABELS } from "@/lib/journey-types";
+import { dateKeyToDate } from "@/lib/journey-date";
 
 interface SocialShareKitProps {
   journey: Journey | null;
   capsules: Capsule[];
   journalText: string;
   activeStyle: StyleKey;
+  travelDate?: string;
 }
 
 function pickLeadText(capsules: Capsule[], journalText: string) {
@@ -58,6 +60,7 @@ export function SocialShareKit({
   capsules,
   journalText,
   activeStyle,
+  travelDate,
 }: SocialShareKitProps) {
   const destination = journey?.destination ?? "我的旅途";
   const tags = buildTags(capsules);
@@ -67,7 +70,7 @@ export function SocialShareKit({
     (sum, capsule) => sum + (capsule.photoCount || capsule.photoUrls?.length || 0),
     0
   );
-  const date = new Date().toLocaleDateString("zh-CN", {
+  const date = (travelDate ? dateKeyToDate(travelDate) : new Date()).toLocaleDateString("zh-CN", {
     month: "long",
     day: "numeric",
   });
