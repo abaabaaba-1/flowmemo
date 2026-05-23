@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Camera, Check, ImagePlus, Loader2, Play, Sparkles, Video } from "lucide-react";
 import type { Capsule, Journey } from "@/lib/journey-types";
 import type { PhotoAsset } from "./journey-utils";
-import { buildPocketEvents, dateText, durationText, timeText } from "./journey-utils";
+import { buildPocketEvents, durationText, timeText } from "./journey-utils";
 
 interface PocketTimelineProps {
   journey: Journey | null;
@@ -15,8 +15,6 @@ interface PocketTimelineProps {
   newCapsuleIds: Set<string>;
   isComposingNote: boolean;
   isAnalyzingPhotos: boolean;
-  activeDayNumber: number;
-  activeTravelDate: string;
   onImportPhotos: (files: File[]) => void;
   onTogglePhotoSelection: (url: string) => void;
   onOpenCanvas: () => void;
@@ -32,8 +30,6 @@ export function PocketTimeline({
   newCapsuleIds,
   isComposingNote,
   isAnalyzingPhotos,
-  activeDayNumber,
-  activeTravelDate,
   onImportPhotos,
   onTogglePhotoSelection,
   onOpenCanvas,
@@ -50,10 +46,10 @@ export function PocketTimeline({
       <div className="mb-6 flex items-start justify-between gap-4 px-8">
         <div className="ml-6 min-w-0">
           <h2 className="truncate text-[15px] font-semibold text-slate-700">
-            Day {activeDayNumber} · {journey?.destination ?? "旅途中"}
+            今日 Pocket · {journey?.destination ?? "旅途中"}
           </h2>
           <p className="mt-1 text-[12px] font-medium text-slate-400">
-            {activeTravelDate || dateText(journey?.startDate) || "今天"} · {events.length} 个事件
+            {events.length} 个事件
             {analyzedPhotoCount > 0 ? ` · AI ${analyzedPhotoCount}` : ""}
           </p>
         </div>

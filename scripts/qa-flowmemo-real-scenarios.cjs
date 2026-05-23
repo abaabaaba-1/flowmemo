@@ -182,9 +182,9 @@ async function run() {
     await scenario("场景 3：记录旅行碎片并检查照片池匹配", async () => {
       await page.getByRole("button", { name: "筑地早餐" }).click();
       await assertVisible(page.getByRole("button", { name: /智能锦囊/ }), "smart pocket trigger", 20000);
-      await assertVisible(page.getByText(/已写入.*时间线/), "note saved assistant confirmation", 20000);
-      await page.getByRole("button", { name: /时间线/ }).click();
-      await assertVisible(page.locator("h2", { hasText: /Day 1/ }), "timeline day title");
+      await assertVisible(page.getByText(/已写入.*Pocket/), "note saved assistant confirmation", 20000);
+      await page.getByRole("button", { name: /Pocket/ }).click();
+      await assertVisible(page.locator("h2", { hasText: /今日 Pocket/ }), "timeline title");
       await assertVisible(page.getByText("已从照片池匹配").first(), "matched photo label", 15000);
       await screenshot(page, "03-timeline-matched");
       report.artifacts.push("qa-03-timeline-matched.png");
@@ -203,8 +203,8 @@ async function run() {
         .locator("textarea")
         .fill("刚刚在新宿雨夜撑伞穿过人群，霓虹和车灯全都落在地面上，像电影片尾。");
       await page.getByRole("button", { name: "保存笔记" }).click();
-      await assertVisible(page.getByText(/已写入.*时间线/).last(), "second note saved", 20000);
-      await page.getByRole("button", { name: /时间线/ }).click();
+      await assertVisible(page.getByText(/已写入.*Pocket/).last(), "second note saved", 20000);
+      await page.getByRole("button", { name: /Pocket/ }).click();
       await assertVisible(page.getByText(/Moment 2/), "second timeline moment", 20000);
       await screenshot(page, "04-upload-and-second-note");
       report.artifacts.push("qa-04-upload-and-second-note.png");
@@ -218,9 +218,9 @@ async function run() {
         .locator("textarea")
         .fill("golden match newonly：刚刚路过一个只有我注意到的小角落，想先记下来，等会儿再补照片。");
       await page.getByRole("button", { name: "保存笔记" }).click();
-      await assertVisible(page.getByText(/已写入.*时间线|已写入时间线/).last(), "pre-photo note saved", 20000);
+      await assertVisible(page.getByText(/已写入.*Pocket/).last(), "pre-photo note saved", 20000);
 
-      await page.getByRole("button", { name: /时间线/ }).click();
+      await page.getByRole("button", { name: /Pocket/ }).click();
       const uniquePhoto = {
         name: "golden-match-newonly.jpg",
         mimeType: "image/jpeg",

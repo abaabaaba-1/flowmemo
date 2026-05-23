@@ -38,8 +38,8 @@ async function run() {
     await assertVisible(pocketButton, "dynamic pocket entry", 20000);
     await page.screenshot({ path: "artifacts/pipeline-03-pocket-awake.png", fullPage: true });
 
-    await page.getByRole("button", { name: /时间线/ }).click();
-    await assertVisible(page.getByText(/Day 1/), "timeline content");
+    await page.getByRole("button", { name: /Pocket/ }).click();
+    await assertVisible(page.getByText(/今日 Pocket/), "timeline content");
     await assertVisible(page.getByText("已从照片池匹配").first(), "matched timeline content", 15000);
     await page.screenshot({ path: "artifacts/pipeline-04-timeline.png", fullPage: true });
 

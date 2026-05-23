@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -27,10 +27,7 @@ import {
   storeDemoPhotoPool,
 } from "@/lib/demo-session";
 import {
-  capsuleMatchesTravelDate,
   dateKeyToDate,
-  getJourneyDayNumber,
-  getJourneyDayOptions,
   resolveDefaultTravelDate,
 } from "@/lib/journey-date";
 import { compressImageToDataUrl, dataUrlToBlob } from "@/utils/image-upload";
@@ -39,7 +36,6 @@ import { GlobalInputBar } from "./journey/global-input-bar";
 import { PocketTimeline } from "./journey/pocket-timeline";
 import {
   capsuleSearchText,
-  dateText,
   fallbackDraft,
   inferredTagsFromName,
   matchPhotos,
@@ -184,7 +180,7 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
           {
             id: "welcome",
             role: "assistant",
-            content: `织流已为你锁定「${tripTitle(loadedJourney?.destination)}」。可以先问计划，也可以直接按住说话，把现场感受写进时间线。`,
+            content: `织流已为你锁定「${tripTitle(loadedJourney?.destination)}」。可以先问计划，也可以直接按住说话，把现场感受写进 Pocket。`,
             timestamp: new Date(),
           },
         ]);
@@ -203,18 +199,8 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, isAssistantThinking, isComposingNote]);
 
-  const startDate = dateText(journey?.startDate);
-  const endDate = dateText(journey?.endDate);
-  const dateRange = startDate && endDate ? `${startDate} - ${endDate}` : "今日旅程";
-  const dayOptions = useMemo(() => getJourneyDayOptions(journey), [journey]);
-  const activeDayNumber = getJourneyDayNumber(activeTravelDate, journey?.startDate);
-  const visibleCapsules = useMemo(
-    () =>
-      capsules.filter((capsule) =>
-        capsuleMatchesTravelDate(capsule, activeTravelDate, journey?.startDate)
-      ),
-    [activeTravelDate, capsules, journey?.startDate]
-  );
+  const activeDayNumber = 1;
+  const visibleCapsules = capsules;
 
   useEffect(() => {
     if (!journey || isAssistantThinking || isComposingNote) return;
@@ -291,7 +277,7 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
             ? {
                 ...message,
                 content:
-                  "我先按轻量路线帮你整理：把时间留给一个主目的地、一个吃饭点和一段自由散步。你也可以直接按住说话，把现场感受写入时间线。",
+                  "我先按轻量路线帮你整理：把时间留给一个主目的地、一个吃饭点和一段自由散步。你也可以直接按住说话，把现场感受写入 Pocket。",
               }
             : message
         )
@@ -432,9 +418,9 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
           role: "assistant",
           content: photoUrls.length
             ? manuallySelectedUrls.length
-              ? `已写入 Day ${activeDayNumber} 时间线，并关联了 ${manuallySelectedUrls.length} 张你手选的照片。`
-              : `已写入 Day ${activeDayNumber} 时间线，并从今日照片池里匹配了 ${photoUrls.length} 张相关素材。`
-            : "已写入时间线。当前没有找到强相关照片，所以先保留为留白卡片，后续导入相册后可以继续匹配。",
+              ? `已写入 Pocket，并关联了 ${manuallySelectedUrls.length} 张你手选的照片。`
+              : `已写入 Pocket，并从今日照片池里匹配了 ${photoUrls.length} 张相关素材。`
+            : "已写入 Pocket。当前没有找到强相关照片，所以先保留为留白卡片，后续导入相册后可以继续匹配。",
           timestamp: new Date(),
         },
       ]);
@@ -727,7 +713,7 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
               <h1 className="truncate text-[15px] font-semibold text-slate-800">
                 {tripTitle(journey?.destination)}
               </h1>
-              <p className="mt-0.5 text-[11px] font-medium text-slate-400">{dateRange}</p>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-400">今日手账</p>
             </div>
             <div className="h-9 w-9" />
           </div>
@@ -756,22 +742,6 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
             </button>
           </div>
           <div className="h-px w-full bg-slate-200/50" />
-
-          <div className="journey-no-scrollbar flex gap-2 overflow-x-auto py-3">
-            {dayOptions.map((day) => (
-              <button
-                key={day.dateKey}
-                onClick={() => setActiveTravelDate(day.dateKey)}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                  activeTravelDate === day.dateKey
-                    ? "border-white/70 bg-white/55 text-slate-800 shadow-sm backdrop-blur"
-                    : "border-white/40 bg-white/25 text-slate-500 backdrop-blur"
-                }`}
-              >
-                Day {day.dayNumber} · {day.label}
-              </button>
-            ))}
-          </div>
         </div>
       </header>
 
@@ -809,9 +779,7 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
               isAnalyzingPhotos={isAnalyzingPhotos}
               onImportPhotos={(files) => void handlePhotoImport(files)}
               onTogglePhotoSelection={toggleSelectedPhoto}
-              activeDayNumber={activeDayNumber}
-              activeTravelDate={activeTravelDate}
-              onOpenCanvas={() => router.push(`/daily-canvas/${journeyId}?date=${activeTravelDate}`)}
+              onOpenCanvas={() => router.push(`/daily-canvas/${journeyId}`)}
             />
           </motion.section>
         )}

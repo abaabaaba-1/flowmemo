@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, Download, Loader2, Share2 } from "lucide-react";
 import { memory, share } from "@eazo/sdk";
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import type { Capsule, Journey, StyleKey } from "@/lib/journey-types";
 import { STYLE_LABELS } from "@/lib/journey-types";
 import { DEMO_CAPSULES, DEMO_JOURNEY, DEMO_JOURNAL_TEXT } from "@/lib/demo-data";
 import { getStoredDemoCapsules } from "@/lib/demo-session";
-import { capsuleMatchesTravelDate, resolveDefaultTravelDate, toDateKey } from "@/lib/journey-date";
 import { JournalMode } from "./DailyCanvasJournal";
 import { VlogMode } from "./DailyCanvasVlog";
 import { ExportCanvas } from "./ExportCanvas";
@@ -31,7 +30,6 @@ function hasLiveCapsules(capsules: Capsule[]) {
 
 export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [journey, setJourney] = useState<Journey | null>(null);
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [activeStyle, setActiveStyle] = useState<StyleKey>("cinematic");
@@ -45,7 +43,6 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
   const exportRef = useRef<HTMLDivElement>(null);
 
   const isDemoMode = journeyId === "demo-journey-izu";
-  const selectedTravelDate = toDateKey(searchParams.get("date")) || resolveDefaultTravelDate(journey);
 
   useEffect(() => {
     async function load() {
@@ -54,11 +51,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
         const displayCapsules =
           storedCapsules.length > 0 ? storedCapsules : (DEMO_CAPSULES as unknown as Capsule[]);
         setJourney(DEMO_JOURNEY as unknown as Journey);
-        setCapsules(
-          displayCapsules.filter((capsule) =>
-            capsuleMatchesTravelDate(capsule, selectedTravelDate, DEMO_JOURNEY.startDate)
-          )
-        );
+        setCapsules(displayCapsules);
         setJournalText(storedCapsules.length > 0 ? "" : DEMO_JOURNAL_TEXT.cinematic);
         setIsLoading(false);
         return;
@@ -67,7 +60,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
       try {
         const [loadedJourney, loadedCapsules] = await Promise.all([
           getJourneyById(journeyId),
-          getJourneyCapsules(journeyId, { travelDate: selectedTravelDate }),
+          getJourneyCapsules(journeyId),
         ]);
         setJourney(loadedJourney);
         setCapsules(loadedCapsules);
@@ -79,7 +72,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
     }
 
     void load();
-  }, [journeyId, isDemoMode, selectedTravelDate]);
+  }, [journeyId, isDemoMode]);
 
   async function generateJournal(style: StyleKey) {
     if (capsules.length === 0) return;
@@ -101,7 +94,6 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
       await generateDailyCanvas({
         journeyId,
         style,
-        travelDate: selectedTravelDate,
         demoMode: isDemoMode,
         destination: journey?.destination ?? "日本 伊豆",
         capsules,
@@ -119,7 +111,6 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
               type: "generate_canvas",
               journey_id: journeyId,
               style,
-              travel_date: selectedTravelDate,
               capsule_count: capsules.length,
             },
           })
@@ -276,7 +267,7 @@ export function DailyCanvasScreen({ journeyId }: DailyCanvasScreenProps) {
               )}
             </h3>
             <p className="font-mono text-[8px] uppercase text-[#8B8174]">
-              {selectedTravelDate} · {capsules.length} 枚胶囊
+              {capsules.length} 枚胶囊
             </p>
           </div>
         </div>
