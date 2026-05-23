@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { BookOpenCheck, Loader2, Play } from "lucide-react";
-import { DEMO_CHAT_PROMPTS, DEMO_PIPELINE_INPUTS } from "@/lib/demo-data";
 import type { ChatMessage } from "./journey-utils";
 import { durationText, timeText } from "./journey-utils";
 
@@ -10,8 +9,6 @@ interface ChatTabProps {
   messages: ChatMessage[];
   isAssistantThinking: boolean;
   isComposingNote: boolean;
-  onAsk: (text: string) => void;
-  onNote: (text: string) => void;
 }
 
 const WAVEFORM_HEIGHTS = [40, 60, 30, 80, 50, 70, 40, 90, 60, 30, 50, 70, 40, 30];
@@ -20,8 +17,6 @@ export function ChatTab({
   messages,
   isAssistantThinking,
   isComposingNote,
-  onAsk,
-  onNote,
 }: ChatTabProps) {
   return (
     <div className="space-y-6">
@@ -97,26 +92,6 @@ export function ChatTab({
         </div>
       )}
 
-      <div className="journey-no-scrollbar flex gap-2 overflow-x-auto pb-2 pt-1">
-        {DEMO_CHAT_PROMPTS.map((prompt) => (
-          <button
-            key={prompt}
-            onClick={() => onAsk(prompt)}
-            className="journey-glass-card shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-slate-600"
-          >
-            {prompt}
-          </button>
-        ))}
-        {DEMO_PIPELINE_INPUTS.slice(0, 3).map((sample) => (
-          <button
-            key={sample.label}
-            onClick={() => onNote(sample.text)}
-            className="journey-glass-card shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-slate-700"
-          >
-            记：{sample.label}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

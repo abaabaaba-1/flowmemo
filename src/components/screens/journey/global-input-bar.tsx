@@ -2,17 +2,18 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpenCheck, FilePlus2, Keyboard, Mic, Send, Square } from "lucide-react";
+import { BookOpenCheck, FilePlus2, Keyboard, Loader2, Mic, Send, Square } from "lucide-react";
 import { toast } from "sonner";
-import { DEMO_PIPELINE_INPUTS } from "@/lib/demo-data";
+import type { PromptSuggestion } from "@/lib/api";
 import { blobToDataUrl, chooseAudioMimeType } from "@/utils/audio-recording";
 import type { MainTab, SpeechRecognitionLike } from "./journey-utils";
 import { getSpeechRecognition } from "./journey-utils";
 
 interface GlobalInputBarProps {
-  demoMode: boolean;
   activeTab: MainTab;
   selectedPhotoCount?: number;
+  promptSuggestions?: PromptSuggestion[];
+  isUpdatingPrompts?: boolean;
   onAsk: (text: string) => void;
   onVoiceNote: (text: string, audioUrl?: string, audioDurationSeconds?: number) => void;
   onImportPhotos: (files: File[]) => void;
@@ -21,9 +22,10 @@ interface GlobalInputBarProps {
 const WAVEFORM_HEIGHTS = [40, 60, 30, 80, 50, 70, 40, 90, 60, 30, 50, 70, 40, 30, 55, 45];
 
 export function GlobalInputBar({
-  demoMode,
   activeTab,
   selectedPhotoCount = 0,
+  promptSuggestions = [],
+  isUpdatingPrompts = false,
   onAsk,
   onVoiceNote,
   onImportPhotos,
@@ -162,23 +164,18 @@ export function GlobalInputBar({
     }
   }
 
+  function applyPromptSuggestion(suggestion: PromptSuggestion) {
+    if (suggestion.intent === "note") {
+      onVoiceNote(suggestion.text);
+      return;
+    }
+
+    onAsk(suggestion.text);
+  }
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-[max(env(safe-area-inset-bottom),40px)] pt-3">
       <div className="mx-auto max-w-[430px]">
-        {demoMode && activeTab === "chat" && (
-          <div className="journey-no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-            {DEMO_PIPELINE_INPUTS.slice(0, 5).map((sample) => (
-              <button
-                key={sample.label}
-                onClick={() => onVoiceNote(sample.text)}
-                className="journey-glass-card shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500"
-              >
-                {sample.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {selectedPhotoCount > 0 && (
           <div className="journey-liquid-glass mb-3 rounded-2xl px-4 py-2 text-xs font-semibold text-slate-600">
             已选择 {selectedPhotoCount} 张照片，下一条笔记会优先关联
@@ -287,6 +284,28 @@ export function GlobalInputBar({
             onImportPhotos(files);
           }}
         />
+
+        {activeTab === "chat" && promptSuggestions.length > 0 && (
+          <div className="journey-no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
+            {promptSuggestions.map((suggestion, index) => (
+              <button
+                key={`${suggestion.intent}-${suggestion.label}-${index}`}
+                onClick={() => applyPromptSuggestion(suggestion)}
+                className={`journey-glass-card shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  suggestion.intent === "note" ? "text-slate-700" : "text-slate-500"
+                }`}
+              >
+                {suggestion.label}
+              </button>
+            ))}
+            {isUpdatingPrompts && (
+              <span className="journey-glass-card inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-400">
+                <Loader2 size={12} className="animate-spin" />
+                更新中
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

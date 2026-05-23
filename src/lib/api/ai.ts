@@ -33,6 +33,14 @@ export interface DirectorNotes {
   score: number;
 }
 
+export type PromptSuggestionIntent = "ask" | "note";
+
+export interface PromptSuggestion {
+  intent: PromptSuggestionIntent;
+  label: string;
+  text: string;
+}
+
 function parseJsonPayload<T>(text: string, fallback: T): T {
   try {
     const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
@@ -147,6 +155,35 @@ export async function streamTravelChat(input: {
   return readTextResponse(response, "旅行助手回复失败", (_chunk, fullText) => {
     input.onChunk?.(fullText);
   });
+}
+
+export async function generatePromptSuggestions(input: {
+  destination?: string | null;
+  startDate?: Date | string | null;
+  endDate?: Date | string | null;
+  messages?: Array<{ role: string; content: string; kind?: string }>;
+  notes?: Capsule[];
+  demoMode?: boolean;
+  signal?: AbortSignal;
+}): Promise<PromptSuggestion[]> {
+  const response = await request("/api/ai/prompt-suggestions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      destination: input.destination,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      messages: input.messages ?? [],
+      notes: input.notes ?? [],
+      demoMode: input.demoMode ?? false,
+    }),
+    signal: input.signal,
+  });
+  const result = await parseJsonResponse<{ suggestions?: PromptSuggestion[] }>(
+    response,
+    "更新提示词失败"
+  );
+  return result.suggestions ?? [];
 }
 
 export async function generateDailyCanvas(input: {

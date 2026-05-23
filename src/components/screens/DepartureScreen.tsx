@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   FileImage,
   ImagePlus,
   Loader2,
@@ -27,7 +29,9 @@ import { fileToBase64 } from "@/utils/image-upload";
 const IS_LOCAL_RUNTIME = process.env.NEXT_PUBLIC_FLOWMEMO_RUNTIME === "local";
 
 const WEEK_DAYS = ["一", "二", "三", "四", "五", "六", "日"];
+const SHORT_WEEK_DAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const FULL_WEEK_DAYS = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+type CalendarSelectionStep = "start" | "end";
 
 function parseIsoDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -91,6 +95,14 @@ function dateRangeLabel(startDate: string, endDate: string) {
   return `${start} - ${compactDateLabel(endDate)}`;
 }
 
+function shortDateLabel(value: string) {
+  const date = parseIsoDate(value);
+  if (!date) return value || "未选择";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}.${day} ${SHORT_WEEK_DAYS[date.getDay()]}`;
+}
+
 function isBefore(left: string, right: string) {
   const leftDate = parseIsoDate(left);
   const rightDate = parseIsoDate(right);
@@ -125,6 +137,7 @@ export function DepartureScreen() {
   const [visibleMonth, setVisibleMonth] = useState(() => firstDayOfMonth("2026-11-08"));
   const [calendarDraftStart, setCalendarDraftStart] = useState(startDate);
   const [calendarDraftEnd, setCalendarDraftEnd] = useState(endDate);
+  const [calendarSelectionStep, setCalendarSelectionStep] = useState<CalendarSelectionStep>("start");
 
   useEffect(() => {
     if (IS_LOCAL_RUNTIME) return;
@@ -311,6 +324,7 @@ export function DepartureScreen() {
   function openCalendar() {
     setCalendarDraftStart(startDate);
     setCalendarDraftEnd(endDate);
+    setCalendarSelectionStep("start");
     setVisibleMonth(firstDayOfMonth(startDate));
     setIsCalendarOpen(true);
   }
@@ -321,19 +335,25 @@ export function DepartureScreen() {
 
   function selectCalendarDate(date: Date) {
     const nextDate = toIsoDate(date);
-    if (!calendarDraftStart || calendarDraftEnd) {
+
+    if (calendarSelectionStep === "start") {
       setCalendarDraftStart(nextDate);
-      setCalendarDraftEnd("");
+      setCalendarDraftEnd((currentEndDate) =>
+        currentEndDate && !isBefore(currentEndDate, nextDate) ? currentEndDate : ""
+      );
+      setCalendarSelectionStep("end");
       return;
     }
 
-    if (isBefore(nextDate, calendarDraftStart)) {
+    if (!calendarDraftStart || isBefore(nextDate, calendarDraftStart)) {
       setCalendarDraftStart(nextDate);
       setCalendarDraftEnd("");
+      setCalendarSelectionStep("end");
       return;
     }
 
     setCalendarDraftEnd(nextDate);
+    setCalendarSelectionStep("start");
   }
 
   function confirmCalendarDates() {
@@ -361,6 +381,9 @@ export function DepartureScreen() {
             const isSingleSelection = selected && isStart && isEnd;
             const isToday = dayIso === todayIso;
             const hasRangeFill = selected && !isSingleSelection;
+            const weekIndex = (date.getDay() + 6) % 7;
+            const shouldConnectAfter = hasRangeFill && isStart && weekIndex < 6;
+            const shouldConnectBefore = hasRangeFill && isEnd && weekIndex > 0;
 
             return (
               <button
@@ -371,8 +394,8 @@ export function DepartureScreen() {
                 aria-pressed={selected}
                 aria-label={`${monthDate.getFullYear()}年${monthDate.getMonth() + 1}月${date.getDate()}日`}
               >
-                {hasRangeFill && isStart && <span className="absolute inset-y-0 right-0 w-1/2 bg-[#5a5a5a]" />}
-                {hasRangeFill && isEnd && <span className="absolute inset-y-0 left-0 w-1/2 bg-[#5a5a5a]" />}
+                {shouldConnectAfter && <span className="absolute inset-y-0 right-0 w-1/2 bg-[#5a5a5a]" />}
+                {shouldConnectBefore && <span className="absolute inset-y-0 left-0 w-1/2 bg-[#5a5a5a]" />}
                 {hasRangeFill && !isStart && !isEnd && <span className="absolute inset-0 bg-[#5a5a5a]" />}
                 {selected && (isStart || isEnd) && <span className="absolute h-11 w-11 rounded-full bg-black" />}
                 {!selected && isToday && (
@@ -473,7 +496,7 @@ export function DepartureScreen() {
                       onClick={openCalendar}
                       className="journey-liquid-glass flex w-full items-center justify-between rounded-[22px] px-6 py-5 text-left transition-transform active:scale-[0.98]"
                     >
-                      <span className="text-[17px] font-medium tracking-wide text-gray-800">
+                      <span className="min-w-0 truncate text-[17px] font-medium tracking-wide text-gray-800">
                         {dateRangeLabel(startDate, endDate)}
                       </span>
                       <CalendarDays size={25} className="shrink-0 text-gray-400" />
@@ -485,7 +508,7 @@ export function DepartureScreen() {
                         onInput={(event) => applyStartDate(event.currentTarget.value)}
                         onChange={(event) => applyStartDate(event.target.value)}
                         onBlur={(event) => applyStartDate(event.currentTarget.value)}
-                        className="absolute left-0 top-0 h-full w-1/2 opacity-[0.01]"
+                        className="absolute left-0 top-0 h-full w-1/2 opacity-0"
                         aria-label="去程日期"
                       />
                       <input
@@ -495,7 +518,7 @@ export function DepartureScreen() {
                         onInput={(event) => applyEndDate(event.currentTarget.value)}
                         onChange={(event) => applyEndDate(event.target.value)}
                         onBlur={(event) => applyEndDate(event.currentTarget.value)}
-                        className="absolute right-0 top-0 h-full w-1/2 opacity-[0.01]"
+                        className="absolute right-0 top-0 h-full w-1/2 opacity-0"
                         aria-label="返程日期"
                       />
                     </div>
@@ -518,19 +541,26 @@ export function DepartureScreen() {
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="group flex items-center gap-2 px-1 pt-2 text-left text-blue-600"
+                  className="journey-liquid-glass flex w-full items-center gap-3 rounded-[22px] px-5 py-4 text-left transition-transform active:scale-[0.98]"
                 >
-                  {isImporting ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : importedName ? (
-                    <FileImage size={18} />
-                  ) : (
-                    <Paperclip size={18} />
-                  )}
-                  <span className="text-sm font-bold tracking-wide">
-                    {importedName || "智能导入行程"}
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#2563EB] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                    {isImporting ? (
+                      <Loader2 size={19} className="animate-spin" />
+                    ) : importedName ? (
+                      <FileImage size={19} />
+                    ) : (
+                      <Paperclip size={19} />
+                    )}
                   </span>
-                  {importedName && <ImagePlus size={16} className="opacity-70" />}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-bold leading-5 text-gray-800">智能导入行程</span>
+                    <span className="mt-1 block truncate text-xs font-medium leading-5 text-gray-500">
+                      {importedName || "机票、酒店订单、行程截图"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-white/65 px-3 py-1.5 text-xs font-bold text-[#2563EB] shadow-sm ring-1 ring-white/70">
+                    {importedName ? <ImagePlus size={15} /> : "选择图片"}
+                  </span>
                 </button>
                 <input
                   ref={fileRef}
@@ -605,33 +635,62 @@ export function DepartureScreen() {
                 <span className="h-1 w-8 rounded-full bg-gray-300" />
               </button>
 
-              <div className="journey-no-scrollbar flex-1 overflow-y-auto px-6 pb-28">
+              <div className="journey-no-scrollbar flex-1 overflow-y-auto px-6 pb-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="mt-2 text-[26px] font-bold tracking-normal text-black">你想去多久？</h2>
-                    <p className="mb-6 mt-1 text-xs font-medium text-gray-400">时区: 北京 GMT +8:00</p>
+                    <h2 className="mt-2 text-[26px] font-bold tracking-normal text-black">选择出行日期</h2>
+                    <p className="mt-1 text-xs font-medium text-gray-400">时区: 北京 GMT +8:00</p>
                   </div>
                   <div className="mt-3 flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       aria-label="上一个月"
                       onClick={() => setVisibleMonth((current) => addMonths(current, -1))}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-lg font-semibold text-gray-500"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500"
                     >
-                      ‹
+                      <ChevronLeft size={18} />
                     </button>
                     <button
                       type="button"
                       aria-label="下一个月"
                       onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-lg font-semibold text-gray-500"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500"
                     >
-                      ›
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 </div>
 
-                <div className="mb-6 grid grid-cols-7 text-center text-[13px] font-medium text-gray-400">
+                <div className="my-6 grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarSelectionStep("start")}
+                    className={[
+                      "rounded-[18px] px-4 py-3 text-left ring-1 transition-colors",
+                      calendarSelectionStep === "start"
+                        ? "bg-black text-white ring-black"
+                        : "bg-gray-50 text-gray-900 ring-gray-100",
+                    ].join(" ")}
+                  >
+                    <span className="block text-xs font-semibold opacity-60">出发</span>
+                    <span className="mt-1 block text-[16px] font-bold">{shortDateLabel(calendarDraftStart)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarSelectionStep("end")}
+                    className={[
+                      "rounded-[18px] px-4 py-3 text-left ring-1 transition-colors",
+                      calendarSelectionStep === "end"
+                        ? "bg-black text-white ring-black"
+                        : "bg-gray-50 text-gray-900 ring-gray-100",
+                    ].join(" ")}
+                  >
+                    <span className="block text-xs font-semibold opacity-60">返程</span>
+                    <span className="mt-1 block text-[16px] font-bold">{shortDateLabel(calendarDraftEnd)}</span>
+                  </button>
+                </div>
+
+                <div className="mb-5 grid grid-cols-7 text-center text-[13px] font-medium text-gray-400">
                   {WEEK_DAYS.map((day) => (
                     <div key={day}>{day}</div>
                   ))}
@@ -640,11 +699,11 @@ export function DepartureScreen() {
                 {[visibleMonth, addMonths(visibleMonth, 1)].map((monthDate) => renderCalendarMonth(monthDate))}
               </div>
 
-              <div className="pointer-events-none absolute bottom-8 left-0 right-0 flex justify-center">
+              <div className="shrink-0 border-t border-gray-100 bg-white/95 px-6 pb-8 pt-4">
                 <button
                   type="button"
                   onClick={confirmCalendarDates}
-                  className="pointer-events-auto rounded-full bg-black px-12 py-3.5 text-[17px] font-medium text-white shadow-xl shadow-black/20 transition-transform active:scale-95"
+                  className="w-full rounded-full bg-black px-12 py-3.5 text-[17px] font-medium text-white shadow-xl shadow-black/20 transition-transform active:scale-95"
                 >
                   确定
                 </button>

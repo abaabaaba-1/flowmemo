@@ -10,14 +10,15 @@ import {
   analyzeImage,
   composeCapsuleDraft,
   createJourneyCapsule,
+  generatePromptSuggestions,
   getJourneyById,
   getJourneyCapsules,
   streamTravelChat,
   updateCapsule,
 } from "@/lib/api";
-import type { AnalyzeImageResult } from "@/lib/api";
+import type { AnalyzeImageResult, PromptSuggestion } from "@/lib/api";
 import type { Capsule, CapsuleEventType, Journey, StyleKey } from "@/lib/journey-types";
-import { DEMO_JOURNEY, DEMO_PHOTO_POOL } from "@/lib/demo-data";
+import { DEMO_CHAT_PROMPTS, DEMO_JOURNEY, DEMO_PHOTO_POOL, DEMO_PIPELINE_INPUTS } from "@/lib/demo-data";
 import {
   getStoredDemoCapsules,
   getStoredDemoJourneyDraft,
@@ -93,6 +94,24 @@ function sameUrls(a: string[] | null | undefined, b: string[]) {
   return left.length === b.length && left.every((url, index) => url === b[index]);
 }
 
+function compactPromptLabel(text: string, maxLength = 14) {
+  const value = text.trim();
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 1)}…`;
+}
+
+const FALLBACK_PROMPT_SUGGESTIONS: PromptSuggestion[] = [
+  ...DEMO_CHAT_PROMPTS.map((text) => ({
+    intent: "ask" as const,
+    label: compactPromptLabel(text),
+    text,
+  })),
+  ...DEMO_PIPELINE_INPUTS.slice(0, 2).map((sample) => ({
+    intent: "note" as const,
+    label: `记：${sample.label}`,
+    text: sample.text,
+  })),
+];
+
 async function uploadDataUrl(path: string, dataUrl: string) {
   const blob = dataUrlToBlob(dataUrl);
   const uploaded = await storage.upload(path, blob, {
@@ -118,6 +137,8 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [isAnalyzingPhotos, setIsAnalyzingPhotos] = useState(false);
   const [isPocketAwake, setIsPocketAwake] = useState(false);
+  const [promptSuggestions, setPromptSuggestions] = useState<PromptSuggestion[]>(FALLBACK_PROMPT_SUGGESTIONS);
+  const [isUpdatingPrompts, setIsUpdatingPrompts] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -194,6 +215,44 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
       ),
     [activeTravelDate, capsules, journey?.startDate]
   );
+
+  useEffect(() => {
+    if (!journey || isAssistantThinking || isComposingNote) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setIsUpdatingPrompts(true);
+      void generatePromptSuggestions({
+        destination: journey.destination,
+        startDate: journey.startDate,
+        endDate: journey.endDate,
+        messages: messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+          kind: message.kind,
+        })),
+        notes: visibleCapsules,
+        demoMode: isDemoMode,
+        signal: controller.signal,
+      })
+        .then((suggestions) => {
+          if (suggestions.length > 0) setPromptSuggestions(suggestions);
+        })
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            setPromptSuggestions(FALLBACK_PROMPT_SUGGESTIONS);
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsUpdatingPrompts(false);
+        });
+    }, 450);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [journey, messages, visibleCapsules, isDemoMode, isAssistantThinking, isComposingNote]);
 
   async function streamAssistantReply(userText: string) {
     const assistantId = uid("assistant");
@@ -729,8 +788,6 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
               messages={messages}
               isAssistantThinking={isAssistantThinking}
               isComposingNote={isComposingNote}
-              onAsk={handleAsk}
-              onNote={(text) => void createNoteFromTranscript(text)}
             />
             <div ref={chatBottomRef} />
           </motion.section>
@@ -761,9 +818,10 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
       </AnimatePresence>
 
       <GlobalInputBar
-        demoMode={isDemoMode}
         activeTab={activeTab}
         selectedPhotoCount={selectedPhotoUrls.size}
+        promptSuggestions={promptSuggestions}
+        isUpdatingPrompts={isUpdatingPrompts}
         onAsk={handleAsk}
         onVoiceNote={(text, audioUrl, audioDurationSeconds) =>
           void createNoteFromTranscript(text, audioUrl, audioDurationSeconds)
