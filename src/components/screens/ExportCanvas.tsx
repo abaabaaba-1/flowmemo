@@ -111,12 +111,12 @@ function looksMojibake(value: string | null | undefined) {
   return suspicious >= Math.max(4, Math.floor(text.length * 0.08));
 }
 
-function cleanScrapbookTitle(value: string | null | undefined, fallback = "Travel Log") {
+function cleanScrapbookTitle(value: string | null | undefined, fallback = "Travel Log", length = 12) {
   const cleaned = String(value ?? fallback)
-    .replace(/^(FlowMemo|Conch)\s*/i, "")
+    .replace(/^Conch\s*/i, "")
     .replace(/\s+/g, "")
     .trim();
-  return clip(cleaned || fallback, 8);
+  return clip(cleaned || fallback, length);
 }
 
 function displayDate(travelDate: string) {
@@ -1068,7 +1068,6 @@ function ModularVintageCollageVariant({
   journey,
   capsules,
   journalText,
-  activeStyle,
   authorName,
   travelDate,
 }: ExportCanvasVariantProps) {
@@ -1108,33 +1107,81 @@ function ModularVintageCollageVariant({
   const sourceJournalText = isDefaultDemoJourney
     ? fallbackText
     : capsuleTextSummary || safeJournalText || fallbackText;
-  const noteText = clip(textLines(sourceJournalText, fallbackText).join(" "), 34);
+  const cleanStoryText = (value: string | null | undefined) =>
+    String(value ?? "")
+      .replace(/\s+/g, " ")
+      .replace(/\.{3,}|…/g, "")
+      .trim();
+  const pickStoryText = (...values: Array<string | null | undefined>) =>
+    values.map(cleanStoryText).find(Boolean) ?? cleanStoryText(fallbackText);
+  const cleanLabel = (value: string | null | undefined) => {
+    const text = cleanStoryText(value);
+    if (!text) return "";
+    if (/^(导入的照片素材|导入的现场素材|导入的视频片段|照片素材|视频素材|photo|upload)$/i.test(text)) {
+      return "";
+    }
+    return text;
+  };
+  const narrativeLines = textLines(sourceJournalText, fallbackText)
+    .map(cleanStoryText)
+    .filter(Boolean);
+  const noteText = pickStoryText(
+    sourceCapsules.find((capsule) => cleanStoryText(capsule.userRawText))?.userRawText,
+    narrativeLines[0],
+    fallbackText
+  );
+  const closingText = pickStoryText(
+    sourceCapsules[1]?.userRawText,
+    narrativeLines[1],
+    sourceCapsules[1]?.aiContent,
+    narrativeLines[0],
+    fallbackText
+  );
   const detailCapsules = sourceCapsules.slice(0, 3);
   const detailLabels = isDefaultDemoJourney
     ? ["修善寺竹林", "筑地清晨", "新宿雨夜"]
-    : detailCapsules.map((capsule) => capsule.title);
-  const destination = isDefaultDemoJourney ? "日本 · 伊豆 · 东京" : cleanScrapbookTitle(sourceJourney?.destination, "Travel");
-  const title = isDefaultDemoJourney ? "伊豆旅记" : cleanScrapbookTitle(sourceJourney?.destination, "Travel");
+    : detailCapsules.map((capsule) => capsule.location || capsule.title);
+  const destination = isDefaultDemoJourney ? "日本 · 伊豆 · 东京" : cleanScrapbookTitle(sourceJourney?.destination, "Travel", 16);
+  const destinationTitle = isDefaultDemoJourney ? "伊豆旅记" : cleanScrapbookTitle(sourceJourney?.destination, "Travel", 10);
+  const title = destinationTitle.length <= 4 ? `${destinationTitle}一页` : destinationTitle;
+  const locationLine =
+    [...new Set(sourceCapsules.map((capsule) => capsule.location).filter(Boolean))]
+      .slice(0, 3)
+      .join(" / ") || destination;
+  const noteFontSize = noteText.length > 86 ? 11 : noteText.length > 62 ? 12 : 13;
+  const closingFontSize = closingText.length > 88 ? 10.5 : 11.5;
+  const footerKeywords = (keywords.length ? keywords : ["memory", "echo"]).slice(0, 5);
+  const photoCaption = (photo: Photo | undefined, fallbackLabel: string) =>
+    cleanLabel(photo?.location) || cleanLabel(photo?.title) || fallbackLabel;
 
   const renderPhotoBlock = ({
     photo,
     dark = false,
+    caption,
+    rotate = "0deg",
+    style,
   }: {
     photo?: Photo;
     dark?: boolean;
+    caption?: string;
+    rotate?: string;
+    style?: CSSProperties;
   }) => (
-    <div
+    <figure
       style={{
         background: dark ? "#202020" : "#FFFFFF",
         border: dark ? "1px solid #2E2C28" : `1px solid ${colors.line}`,
-        padding: "7px 7px 12px",
-        boxShadow: "0 8px 16px rgba(58,45,29,0.12)",
+        padding: caption ? "7px 7px 10px" : "7px",
+        boxShadow: "0 10px 18px rgba(58,45,29,0.14)",
         boxSizing: "border-box",
         display: "grid",
-        gridTemplateRows: "minmax(0, 1fr)",
-        height: "100%",
+        gridTemplateRows: caption ? "minmax(0, 1fr) auto" : "minmax(0, 1fr)",
+        gap: caption ? 6 : 0,
+        margin: 0,
         minWidth: 0,
         position: "relative",
+        transform: `rotate(${rotate})`,
+        ...style,
       }}
     >
       <Tape
@@ -1152,7 +1199,9 @@ function ModularVintageCollageVariant({
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              objectPosition: "center",
               display: "block",
+              maxWidth: "100%",
               filter: dark ? "saturate(.82) contrast(1.03)" : "saturate(.88) contrast(.98)",
             }}
           />
@@ -1162,23 +1211,66 @@ function ModularVintageCollageVariant({
           </div>
         )}
       </div>
-    </div>
+      {caption && (
+        <figcaption
+          style={{
+            color: dark ? "#E8D7B8" : colors.ink,
+            fontSize: 9.5,
+            lineHeight: "13px",
+            minHeight: 13,
+            wordBreak: "break-all",
+            fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
+          }}
+        >
+          {caption}
+        </figcaption>
+      )}
+    </figure>
   );
 
-  const renderDetailCard = (index: number) => {
+  const renderDetailCard = (index: number, style: CSSProperties, rotate: string) => {
     const capsule = detailCapsules[index];
     const photo = photoAt(index + 4);
-    const label = clip(detailLabels[index] ?? capsule?.title ?? photo?.title ?? `memo ${index + 1}`, 8);
+    const label =
+      cleanLabel(detailLabels[index]) ||
+      cleanLabel(capsule?.title) ||
+      photoCaption(photo, `片段 ${index + 1}`);
 
     return (
-      <div key={index} style={{ minWidth: 0, display: "grid", gridTemplateRows: "74px 18px", gap: 6 }}>
-        <div style={{ overflow: "hidden", background: colors.accentSoft, border: `1px solid ${colors.line}` }}>
+      <div
+        key={index}
+        style={{
+          position: "absolute",
+          minWidth: 0,
+          display: "grid",
+          gridTemplateRows: "74px auto",
+          gap: 6,
+          transform: `rotate(${rotate})`,
+          ...style,
+        }}
+      >
+        <div
+          style={{
+            overflow: "hidden",
+            background: colors.accentSoft,
+            border: `1px solid ${colors.line}`,
+            boxShadow: "0 6px 12px rgba(58,45,29,0.10)",
+          }}
+        >
           {photo && (
             <img
               src={photo.url}
               alt=""
               crossOrigin="anonymous"
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.82) contrast(.96)" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+                display: "block",
+                maxWidth: "100%",
+                filter: "saturate(.82) contrast(.96)",
+              }}
             />
           )}
         </div>
@@ -1186,11 +1278,9 @@ function ModularVintageCollageVariant({
           style={{
             color: colors.ink,
             fontSize: 10,
-            lineHeight: "18px",
-            height: 18,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
+            lineHeight: "13px",
+            wordBreak: "break-all",
+            fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
           }}
         >
           {label}
@@ -1204,185 +1294,275 @@ function ModularVintageCollageVariant({
       <div
         style={{
           position: "relative",
-          minHeight: "720px",
+          height: "720px",
           overflow: "hidden",
-          background:
-            "linear-gradient(90deg, transparent 0 184px, rgba(207,195,172,.44) 184px 185px, transparent 185px), #FAF5EA",
-          padding: "18px 18px 16px",
+          background: "radial-gradient(circle at 22% 8%, rgba(255,255,255,.58), transparent 32%), radial-gradient(circle at 82% 24%, rgba(226,211,184,.34), transparent 26%), #FAF5EA",
           boxShadow: "inset 0 0 0 1px rgba(207,194,169,.44)",
         }}
       >
-        <div style={{ display: "grid", gridTemplateColumns: "96px 1fr", gap: 12, alignItems: "start", minHeight: 76 }}>
-          <div
-            style={{
-              height: 68,
-              border: `1px solid ${colors.line}`,
-              background: "rgba(255,253,247,.72)",
-              display: "grid",
-              placeItems: "center",
-              textAlign: "center",
-              color: colors.ink,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.16em", color: colors.muted }}>DATE</div>
-              <div style={{ marginTop: 4, fontFamily: '"Nanum Myeongjo", serif', fontSize: 19, fontWeight: 700 }}>
-                {monthDay(travelDate)}
-              </div>
-            </div>
-          </div>
-          <div style={{ minWidth: 0, paddingTop: 2 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.2em" }}>FLOWMEMO</span>
-              <span style={{ color: colors.muted, fontSize: 8, fontWeight: 800, letterSpacing: "0.12em" }}>
-                {STYLE_LABELS[activeStyle]?.label}
-              </span>
-            </div>
-            <h1
-              style={{
-                margin: "10px 0 0",
-                color: colors.ink,
-                fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", serif',
-                fontSize: 24,
-                lineHeight: 1.12,
-                fontWeight: 400,
-                maxHeight: 54,
-                overflow: "hidden",
-                wordBreak: "break-all",
-              }}
-            >
-              {title}
-            </h1>
-            <div style={{ marginTop: 7, color: colors.muted, fontSize: 9, letterSpacing: "0.08em" }}>
-              {destination} / {fullDate(travelDate)}
+        <div
+          style={{
+            position: "absolute",
+            left: 184,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            background: "rgba(178,164,139,.16)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 458,
+            height: 1,
+            background: "rgba(178,164,139,.18)",
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            left: 18,
+            top: 18,
+            width: 92,
+            height: 66,
+            border: `1px solid ${colors.line}`,
+            background: "rgba(255,253,247,.78)",
+            display: "grid",
+            placeItems: "center",
+            textAlign: "center",
+            color: colors.ink,
+            transform: "rotate(-1.5deg)",
+            boxShadow: "0 7px 13px rgba(58,45,29,.08)",
+            zIndex: 4,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.16em", color: colors.muted }}>DATE</div>
+            <div style={{ marginTop: 4, fontFamily: '"Nanum Myeongjo", serif', fontSize: 19, fontWeight: 700 }}>
+              {monthDay(travelDate)}
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 12, height: 292, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div style={{ display: "grid", gridTemplateRows: "178px 104px", gap: 10, minWidth: 0 }}>
-            <div style={{ transform: "rotate(-1deg)", transformOrigin: "50% 50%" }}>
-              {renderPhotoBlock({ photo: photoAt(0) })}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {renderPhotoBlock({ photo: photoAt(1), dark: true })}
-              {renderPhotoBlock({ photo: photoAt(2) })}
-            </div>
+        <header
+          style={{
+            position: "absolute",
+            left: 126,
+            right: 20,
+            top: 24,
+            zIndex: 5,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+            <span style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.2em" }}>CONCH</span>
+            <span style={{ color: colors.muted, fontSize: 8, fontWeight: 800, letterSpacing: "0.12em" }}>
+              MEMORY ECHO
+            </span>
           </div>
-          <div style={{ display: "grid", gridTemplateRows: "126px 156px", gap: 10, minWidth: 0 }}>
-            <div style={{ transform: "rotate(1deg)", transformOrigin: "50% 50%" }}>
-              {renderPhotoBlock({ photo: photoAt(3) })}
-            </div>
-            <div
-              style={{
-                background: "rgba(255,253,247,.78)",
-                border: `1px solid ${colors.line}`,
-                padding: "12px 12px 10px",
-                minWidth: 0,
-                boxShadow: "0 7px 14px rgba(58,45,29,.08)",
-              }}
-            >
-              <div
-                style={{
-                  color: colors.muted,
-                  fontSize: 8,
-                  fontWeight: 900,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  marginBottom: 8,
-                }}
-              >
-                notebook
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  color: colors.ink,
-                  fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
-                  fontSize: 13,
-                  lineHeight: "22px",
-                  height: 88,
-                  overflow: "hidden",
-                  wordBreak: "break-all",
-                  backgroundImage:
-                    "repeating-linear-gradient(transparent, transparent 21px, rgba(91,84,72,.24) 21px, rgba(91,84,72,.24) 22px)",
-                }}
-              >
-                {noteText}
-              </p>
-              <div style={{ marginTop: 8, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>recorded by {authorName}</div>
-            </div>
+          <h1
+            style={{
+              margin: "9px 0 0",
+              color: colors.ink,
+              fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", serif',
+              fontSize: title.length > 8 ? 21 : 24,
+              lineHeight: 1.12,
+              fontWeight: 400,
+              wordBreak: "break-all",
+            }}
+          >
+            {title}
+          </h1>
+          <div style={{ marginTop: 6, color: colors.muted, fontSize: 9, lineHeight: 1.35, letterSpacing: "0.05em" }}>
+            {destination} / {fullDate(travelDate)}
           </div>
+        </header>
+
+        {renderPhotoBlock({
+          photo: photoAt(0),
+          caption: photoCaption(photoAt(0), "旅途主镜头"),
+          rotate: "-2.2deg",
+          style: { position: "absolute", left: 22, top: 116, width: 176, height: 226, zIndex: 5 },
+        })}
+        {renderPhotoBlock({
+          photo: photoAt(3),
+          caption: photoCaption(photoAt(3), "路上的颜色"),
+          rotate: "1.8deg",
+          style: { position: "absolute", right: 22, top: 106, width: 144, height: 112, zIndex: 4 },
+        })}
+        {renderPhotoBlock({
+          photo: photoAt(1),
+          dark: true,
+          rotate: "-3deg",
+          style: { position: "absolute", left: 32, top: 350, width: 78, height: 96, zIndex: 6 },
+        })}
+        {renderPhotoBlock({
+          photo: photoAt(2),
+          caption: photoCaption(photoAt(2), "雨后的街角"),
+          rotate: "2.4deg",
+          style: { position: "absolute", left: 122, top: 356, width: 86, height: 90, zIndex: 5 },
+        })}
+
+        <section
+          style={{
+            position: "absolute",
+            right: 20,
+            top: 234,
+            width: 142,
+            minHeight: 170,
+            border: `1px solid ${colors.line}`,
+            background: "rgba(255,253,247,.84)",
+            padding: "14px 14px 12px",
+            transform: "rotate(-0.8deg)",
+            boxShadow: "0 9px 18px rgba(58,45,29,.09)",
+            zIndex: 6,
+          }}
+        >
+          <Tape colors={colors} variant="cream" style={{ left: 48, top: -9, width: 54, height: 16, transform: "rotate(2deg)", opacity: 0.48 }} />
+          <div
+            style={{
+              color: colors.muted,
+              fontSize: 8,
+              fontWeight: 900,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              marginBottom: 10,
+            }}
+          >
+            NOTEBOOK
+          </div>
+          <p
+            style={{
+              margin: 0,
+              color: colors.ink,
+              fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
+              fontSize: noteFontSize,
+              lineHeight: noteText.length > 86 ? "18px" : "21px",
+              wordBreak: "break-all",
+              backgroundImage:
+                "repeating-linear-gradient(transparent, transparent 20px, rgba(91,84,72,.18) 20px, rgba(91,84,72,.18) 21px)",
+            }}
+          >
+            {noteText}
+          </p>
+          <div style={{ marginTop: 10, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>recorded by {authorName}</div>
+        </section>
+
+        <div
+          style={{
+            position: "absolute",
+            left: 18,
+            right: 18,
+            top: 466,
+            height: 106,
+            background: "rgba(239,230,213,.38)",
+            border: `1px solid rgba(216,204,185,.58)`,
+            transform: "rotate(0.4deg)",
+            zIndex: 3,
+          }}
+        >
+          <Tape colors={colors} variant="dot" style={{ left: 42, top: -8, width: 50, height: 15, transform: "rotate(-6deg)", opacity: 0.5 }} />
+          {renderDetailCard(0, { left: 18, top: 16, width: 84 }, "-1.8deg")}
+          {renderDetailCard(1, { left: 128, top: 10, width: 82 }, "1.2deg")}
+          {renderDetailCard(2, { right: 18, top: 15, width: 82 }, "-0.7deg")}
         </div>
 
         <div
           style={{
-            marginTop: 14,
+            position: "absolute",
+            left: 20,
+            right: 20,
+            bottom: 32,
+            minHeight: 108,
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 10,
-            padding: "10px 10px 8px",
-            background: "rgba(239,230,213,.48)",
-            border: `1px solid rgba(216,204,185,.74)`,
+            gridTemplateColumns: "74px 1fr",
+            gap: 12,
+            zIndex: 4,
           }}
         >
-          {[0, 1, 2].map((index) => renderDetailCard(index))}
-        </div>
-
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "92px 1fr", gap: 12, alignItems: "stretch" }}>
           <div
             style={{
+              height: 84,
               border: `1px solid ${colors.line}`,
-              background: "rgba(255,253,247,.74)",
-              padding: "10px 8px",
-              textAlign: "center",
-              color: colors.ink,
-              minHeight: 74,
-            }}
-          >
-            <div style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.16em", color: colors.muted }}>TICKET</div>
-            <div style={{ marginTop: 8, fontFamily: '"Nanum Myeongjo", serif', fontSize: 22, lineHeight: 1, fontWeight: 700 }}>
-              {dayNumber(travelDate)}
-            </div>
-            <div style={{ marginTop: 7, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>{monthShort(travelDate)}</div>
-          </div>
-          <div
-            style={{
-              borderTop: `1px solid ${colors.line}`,
-              borderBottom: `1px solid ${colors.line}`,
-              padding: "10px 0",
+              background: "rgba(255,253,247,.72)",
               display: "flex",
               flexDirection: "column",
-              justifyContent: "space-between",
-              minWidth: 0,
+              alignItems: "center",
+              justifyContent: "center",
+              color: colors.ink,
+              transform: "rotate(1.5deg)",
+              boxShadow: "0 6px 12px rgba(58,45,29,.08)",
             }}
           >
-            <div style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.18em" }}>SLOW TRAVEL LOG</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-              {(keywords.length ? keywords : ["slow", "memo", "route"]).map((keyword) => (
-                <span
-                  key={keyword}
-                  style={{
-                    maxWidth: 92,
-                    border: `1px solid rgba(119,111,99,.34)`,
-                    background: "rgba(255,253,247,.68)",
-                    color: colors.muted,
-                    padding: "4px 7px",
-                    fontSize: 8,
-                    fontWeight: 800,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {keyword}
-                </span>
-              ))}
+            <div style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.16em", color: colors.muted }}>DAY</div>
+            <div style={{ marginTop: 7, fontFamily: '"Nanum Myeongjo", serif', fontSize: 23, lineHeight: 1, fontWeight: 700 }}>
+              {dayNumber(travelDate)}
             </div>
-            <div style={{ marginTop: 9, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>{authorName} / FlowMemo</div>
+            <div style={{ marginTop: 6, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>{monthShort(travelDate)}</div>
+          </div>
+          <div
+            style={{
+              minWidth: 0,
+              borderTop: `1px solid ${colors.line}`,
+              borderBottom: `1px solid ${colors.line}`,
+              padding: "10px 0 9px",
+            }}
+          >
+              <div style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.18em" }}>MEMORY ROUTE</div>
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: colors.ink,
+                  fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
+                  fontSize: closingFontSize,
+                  lineHeight: "18px",
+                  wordBreak: "break-all",
+                }}
+              >
+                {closingText}
+              </p>
+              <div style={{ marginTop: 8, color: colors.muted, fontSize: 8, lineHeight: 1.5, letterSpacing: "0.05em" }}>
+                {locationLine}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
+                {footerKeywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    style={{
+                      border: `1px solid rgba(119,111,99,.28)`,
+                      background: "rgba(255,253,247,.62)",
+                      color: colors.muted,
+                      padding: "3px 6px",
+                      fontSize: 8,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {keyword}
+                  </span>
+                ))}
+                </div>
+                <div style={{ color: colors.muted, fontSize: 8, letterSpacing: "0.12em", whiteSpace: "nowrap" }}>{authorName} / Conch</div>
+              </div>
           </div>
         </div>
 
+        <p
+          style={{
+            position: "absolute",
+            left: 22,
+            bottom: 12,
+            margin: 0,
+            color: "#AAA193",
+            fontSize: 8,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+          }}
+        >
+          recalled by Conch
+        </p>
       </div>
     </CanvasShell>
   );

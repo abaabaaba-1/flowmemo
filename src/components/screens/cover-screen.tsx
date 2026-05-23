@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { HomeGrainientBackground } from "./home-grainient-background";
 
 interface CoverScreenProps {
   onStart: () => void;
@@ -10,16 +11,7 @@ interface CoverScreenProps {
 export function CoverScreen({ onStart }: CoverScreenProps) {
   return (
     <main className="relative min-h-svh overflow-hidden bg-[#F8FCFF] text-[#43556B]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_16%_14%,rgba(255,255,255,0.92),transparent_24%),radial-gradient(circle_at_84%_18%,rgba(230,184,91,0.16),transparent_18%),radial-gradient(circle_at_26%_82%,rgba(126,174,216,0.16),transparent_20%),linear-gradient(180deg,#FBFDFF_0%,#F6FBFF_45%,#FFFDF6_100%)]"
-      >
-        <span className="absolute left-2.5 top-[190px] h-[330px] w-[330px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.78),rgba(255,255,255,0))] blur-[90px]" />
-        <span className="absolute left-[90px] top-0 h-[290px] w-[290px] rounded-full bg-[radial-gradient(circle,rgba(207,232,255,0.55),rgba(207,232,255,0))] blur-[88px]" />
-        <span className="absolute -left-[150px] -top-[130px] h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.85),rgba(224,242,254,0))] blur-[90px]" />
-        <span className="absolute -right-10 top-[330px] h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(254,243,184,0.55),rgba(254,249,195,0))] blur-[90px]" />
-        <span className="absolute -bottom-[90px] -left-[90px] h-[440px] w-[440px] rounded-full bg-[radial-gradient(circle,rgba(217,236,255,0.55),rgba(217,236,255,0))] blur-[90px]" />
-      </div>
+      <HomeGrainientBackground />
 
       <div className="relative z-10 mx-auto flex min-h-svh w-full max-w-[450px] flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.24),rgba(255,255,255,0.08))] px-4 pb-[max(env(safe-area-inset-bottom),18px)] pt-[max(env(safe-area-inset-top),18px)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-xl lg:my-3 lg:min-h-[calc(100svh-24px)] lg:max-w-[420px] lg:rounded-[34px] lg:shadow-[0_36px_90px_rgba(29,39,53,0.14)]">
         <header className="flex items-center justify-between px-1 pb-3 pt-1 text-[15px] font-semibold text-black/80">

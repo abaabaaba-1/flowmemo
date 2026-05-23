@@ -8,13 +8,10 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  FileImage,
   History,
-  ImagePlus,
   Loader2,
   MapPin,
   Mountain,
-  Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createJourney, getActiveJourney, importItineraryFromImage, standardizeDestination } from "@/lib/api";
@@ -48,13 +45,6 @@ function toIsoDate(date: Date) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-
-function addDays(date: Date, days: number) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
-}
-
-const DEFAULT_START_DATE = toIsoDate(new Date());
-const DEFAULT_END_DATE = toIsoDate(addDays(new Date(), 6));
 
 function firstDayOfMonth(value: string) {
   const date = parseIsoDate(value) ?? new Date();
@@ -97,7 +87,7 @@ function compactDateLabel(value: string) {
 }
 
 function dateRangeLabel(startDate: string, endDate: string) {
-  if (!startDate && !endDate) return "开始日期 结束日期";
+  if (!startDate && !endDate) return "开始日期-结束日期";
   const start = compactDateLabel(startDate);
   if (!endDate || startDate === endDate) return start;
   return `${start} - ${compactDateLabel(endDate)}`;
@@ -127,8 +117,8 @@ function isInRange(value: string, start?: string | null, end?: string | null) {
 export function DepartureScreen() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [startDate, setStartDate] = useState(DEFAULT_START_DATE);
-  const [endDate, setEndDate] = useState(DEFAULT_END_DATE);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [destinationText, setDestinationText] = useState("");
   const [destinationCountryRegion, setDestinationCountryRegion] = useState("");
   const [destinationCity, setDestinationCity] = useState("");
@@ -142,7 +132,7 @@ export function DepartureScreen() {
   const [isStandardizingDestination, setIsStandardizingDestination] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [visibleMonth, setVisibleMonth] = useState(() => firstDayOfMonth(DEFAULT_START_DATE));
+  const [visibleMonth, setVisibleMonth] = useState(() => firstDayOfMonth(""));
   const [calendarDraftStart, setCalendarDraftStart] = useState(startDate);
   const [calendarDraftEnd, setCalendarDraftEnd] = useState(endDate);
   const [calendarSelectionStep, setCalendarSelectionStep] = useState<CalendarSelectionStep>("start");
@@ -489,13 +479,50 @@ export function DepartureScreen() {
             </div>
 
             <div className="journey-no-scrollbar flex-1 overflow-y-auto px-8 pt-12">
-              <h1 className="mb-14 text-[32px] font-bold leading-tight tracking-normal text-gray-800">
-                请填写
-                <br />
-                行程信息
+              <h1 className="text-[32px] font-bold leading-tight tracking-normal text-gray-800">
+                你的下一站是？
               </h1>
 
-              <div className="space-y-8">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="mt-4 text-left text-sm font-semibold leading-6 text-[#60A5FA] transition-colors active:text-[#2563EB]"
+              >
+                {isImporting ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Loader2 size={15} className="animate-spin" />
+                    正在识别订单或行程截图
+                  </span>
+                ) : (
+                  "✨ 嫌麻烦？上传订单或行程截图一键识别"
+                )}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = "";
+                  if (file) void handleImport(file);
+                }}
+              />
+
+              <div className="mt-12 space-y-8">
+                <div className="space-y-3">
+                  <label className="ml-1 block text-sm font-medium text-gray-500">目的地</label>
+                  <div className="journey-liquid-glass flex items-center justify-between rounded-[22px] px-6 py-5 transition-colors focus-within:bg-white/60">
+                    <input
+                      value={destinationText}
+                      onChange={(event) => updateDestinationText(event.target.value)}
+                      placeholder="请输入目的地"
+                      className="min-w-0 flex-1 bg-transparent text-[17px] font-medium tracking-wide text-gray-800 outline-none placeholder:text-gray-400"
+                    />
+                    <MapPin size={25} className="ml-2 shrink-0 text-gray-400" />
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <label className="ml-1 block text-sm font-medium text-gray-500">出行日期</label>
                   <div className="relative">
@@ -504,7 +531,12 @@ export function DepartureScreen() {
                       onClick={openCalendar}
                       className="journey-liquid-glass flex w-full items-center justify-between rounded-[22px] px-6 py-5 text-left transition-transform active:scale-[0.98]"
                     >
-                      <span className="min-w-0 truncate text-[17px] font-medium tracking-wide text-gray-800">
+                      <span
+                        className={[
+                          "min-w-0 truncate text-[17px] font-medium tracking-wide",
+                          startDate || endDate ? "text-gray-800" : "text-gray-400",
+                        ].join(" ")}
+                      >
                         {dateRangeLabel(startDate, endDate)}
                       </span>
                       <CalendarDays size={25} className="shrink-0 text-gray-400" />
@@ -532,55 +564,6 @@ export function DepartureScreen() {
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <label className="ml-1 block text-sm font-medium text-gray-500">目的地</label>
-                  <div className="journey-liquid-glass flex items-center justify-between rounded-[22px] px-6 py-5 transition-colors focus-within:bg-white/60">
-                    <input
-                      value={destinationText}
-                      onChange={(event) => updateDestinationText(event.target.value)}
-                      placeholder="请输入目的地"
-                      className="min-w-0 flex-1 bg-transparent text-[17px] font-medium tracking-wide text-gray-800 outline-none placeholder:text-gray-400"
-                    />
-                    <MapPin size={25} className="ml-2 shrink-0 text-red-400" />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="journey-liquid-glass flex w-full items-center gap-3 rounded-[22px] px-5 py-4 text-left transition-transform active:scale-[0.98]"
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#2563EB] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                    {isImporting ? (
-                      <Loader2 size={19} className="animate-spin" />
-                    ) : importedName ? (
-                      <FileImage size={19} />
-                    ) : (
-                      <Paperclip size={19} />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-bold leading-5 text-gray-800">智能导入行程</span>
-                    <span className="mt-1 block truncate text-xs font-medium leading-5 text-gray-500">
-                      {importedName || "机票、酒店订单、行程截图"}
-                    </span>
-                  </span>
-                  <span className="shrink-0 rounded-full bg-white/65 px-3 py-1.5 text-xs font-bold text-[#2563EB] shadow-sm ring-1 ring-white/70">
-                    {importedName ? <ImagePlus size={15} /> : "选择图片"}
-                  </span>
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.currentTarget.value = "";
-                    if (file) void handleImport(file);
-                  }}
-                />
               </div>
             </div>
 
