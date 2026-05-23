@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       [
         {
           role: "system",
-          content: `你是 FlowMemo 聊天页的动态快捷回复引擎。你要根据旅程、最近对话和已记录的 Pocket 笔记，生成输入栏上方的快捷回复。
+          content: `你是 Conch 聊天页的动态快捷回复引擎。Conch 的概念是把回忆像海螺里的海声一样重现。你要根据旅程、最近对话和已记录的 Pocket 笔记，生成输入栏上方的快捷回复。
 
 要求：
 - 输出 5 个中文提示词，直接可点击使用。

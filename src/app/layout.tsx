@@ -15,16 +15,16 @@ const EAZO_RUNTIME_ENABLED =
 
 export const metadata: Metadata = {
   ...(SITE_URL ? { metadataBase: new URL(SITE_URL) } : {}),
-  title: "织流 FlowMemo — AI 旅行记忆导演",
-  description: "随手说拍，AI 自动编织成高颜值旅行手账与 Vlog 图片集，直接发到社交平台。",
+  title: "Conch — 旅行回忆回响器",
+  description: "把声音、照片和碎片记忆收进海螺，AI 帮你在耳边重现旅途。",
   icons: {
     icon: "/favicon.svg",
   },
   openGraph: {
     type: "website",
-    siteName: "织流 FlowMemo",
-    title: "织流 FlowMemo — AI 旅行记忆导演",
-    description: "随手说拍，AI 自动编织成高颜值旅行手账。",
+    siteName: "Conch",
+    title: "Conch — 旅行回忆回响器",
+    description: "把声音、照片和碎片记忆收进海螺，AI 帮你在耳边重现旅途。",
     url: "/",
     locale: "zh_CN",
   },

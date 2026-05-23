@@ -221,7 +221,7 @@ function HeroScrapbook({
     paragraphs[0] ||
     capsules[0]?.aiContent ||
     capsules[0]?.userRawText ||
-    "按住说话，把海风、脚步和当时的心情交给 FlowMemo。";
+    "按住说话，把海风、脚步和当时的心情收进 Conch。";
   const noteText = heroText.length > 118 ? `${heroText.slice(0, 115)}...` : heroText;
   const firstLocation = coverPhotos[0]?.location || capsules[0]?.location || "Travel";
 
@@ -233,7 +233,7 @@ function HeroScrapbook({
           <span className="text-lg font-bold leading-none">{dayLabel(travelDate)}</span>
         </div>
         <div className="min-w-0 flex-1 rotate-[1deg] text-[27px] leading-none text-[#576064]" style={handFont}>
-          FlowMemo memories...
+          Conch echoes...
         </div>
       </div>
 
@@ -267,7 +267,7 @@ function HeroScrapbook({
 
         <div className="mt-5 flex items-center justify-between px-1 text-[10px] uppercase tracking-[0.24em] text-[#B4A99A]">
           <span>{STYLE_LABELS[activeStyle]?.label}</span>
-          <span>{isGenerating ? "weaving" : "stitched"}</span>
+          <span>{isGenerating ? "listening" : "echoed"}</span>
         </div>
       </div>
     </section>
@@ -294,7 +294,7 @@ function MemoryThread({
       {isGenerating && paragraphs.length === 0 ? (
         <div className="flex items-center gap-2 text-sm font-semibold text-[#C86B4A]">
           <span className="h-2 w-2 animate-ping rounded-full bg-[#C86B4A]" />
-          正在把今天织成手账...
+          正在听见今天的回响...
         </div>
       ) : (
         <div
@@ -420,7 +420,7 @@ export function JournalMode({ capsules, journalText, activeStyle, isGenerating, 
       </div>
       <div className="pb-4 pt-10 text-center">
         <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#B4A99A]">
-          FlowMemo travel scrapbook
+          Conch travel scrapbook
         </span>
       </div>
     </div>

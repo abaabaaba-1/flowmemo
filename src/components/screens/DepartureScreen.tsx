@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileImage,
+  History,
   ImagePlus,
   Loader2,
   MapPin,
@@ -303,7 +304,7 @@ export function DepartureScreen() {
         ...destination,
         startDate,
         endDate,
-        description: importedName ? `由 ${importedName} 导入` : "FlowMemo 启程准备",
+        description: importedName ? `由 ${importedName} 导入` : "Conch 启程准备",
       });
       if (journey.id) return `/journey/${journey.id}`;
     } catch (error) {
@@ -454,7 +455,7 @@ export function DepartureScreen() {
               transition={{ delay: 0.4 }}
               className="mt-6 text-sm font-semibold tracking-[0.22em] text-gray-500"
             >
-              正在织入旅程线索
+              正在听取旅程线索
             </motion.p>
           </motion.section>
         ) : (
@@ -584,6 +585,17 @@ export function DepartureScreen() {
             </div>
 
             <div className="relative z-20 shrink-0 p-8 pb-10">
+              <button
+                type="button"
+                onClick={() => router.push("/history")}
+                className="journey-liquid-glass mb-3 flex w-full items-center justify-between rounded-[22px] px-5 py-4 text-left"
+              >
+                <span>
+                  <span className="block text-sm font-bold text-gray-800">历史旅程</span>
+                  <span className="mt-1 block text-xs text-gray-500">回看已经收进 Conch 的旅途</span>
+                </span>
+                <History size={18} className="text-blue-600" />
+              </button>
               {activeJourney && (
                 <button
                   type="button"

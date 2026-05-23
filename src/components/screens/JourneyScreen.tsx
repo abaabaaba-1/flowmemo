@@ -18,7 +18,7 @@ import {
 } from "@/lib/api";
 import type { AnalyzeImageResult, PromptSuggestion } from "@/lib/api";
 import type { Capsule, CapsuleEventType, Journey, StyleKey } from "@/lib/journey-types";
-import { DEMO_CHAT_PROMPTS, DEMO_JOURNEY, DEMO_PHOTO_POOL, DEMO_PIPELINE_INPUTS } from "@/lib/demo-data";
+import { DEMO_CHAT_PROMPTS, DEMO_JOURNEY, DEMO_PIPELINE_INPUTS } from "@/lib/demo-data";
 import {
   getStoredDemoCapsules,
   getStoredDemoJourneyDraft,
@@ -153,12 +153,12 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
         setJourney(demoJourney);
         setActiveTravelDate(resolveDefaultTravelDate(demoJourney));
         setCapsules(storedCapsules);
-        setPhotoPool([...(DEMO_PHOTO_POOL as PhotoAsset[]), ...getStoredDemoPhotoPool()]);
+        setPhotoPool(getStoredDemoPhotoPool());
         setMessages([
           {
             id: "welcome",
             role: "assistant",
-            content: `织流已为你锁定「${tripTitle(demoJourney.destination)}」。你可以在这里问计划，也可以按住底部语音记录旅行感受；快捷记录会帮你把重点写进 Pocket。`,
+            content: `Conch 已为你锁定「${tripTitle(demoJourney.destination)}」。你可以在这里问计划，也可以按住底部语音记录旅行感受；快捷记录会把这些回忆收进 Pocket，之后像海声一样重现。`,
             timestamp: new Date(),
           },
         ]);
@@ -180,7 +180,7 @@ export function JourneyScreen({ journeyId }: JourneyScreenProps) {
           {
             id: "welcome",
             role: "assistant",
-            content: `织流已为你锁定「${tripTitle(loadedJourney?.destination)}」。可以先问计划，也可以直接按住说话，把现场感受写进 Pocket。`,
+            content: `Conch 已为你锁定「${tripTitle(loadedJourney?.destination)}」。可以先问计划，也可以直接按住说话，把现场感受收进 Pocket。`,
             timestamp: new Date(),
           },
         ]);

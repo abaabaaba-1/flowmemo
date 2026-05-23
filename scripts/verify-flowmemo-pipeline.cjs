@@ -53,14 +53,13 @@ async function run() {
 
     await page.getByRole("button", { name: /Pocket/ }).click();
     await assertVisible(page.getByText(/Day 1/).first(), "timeline content");
-    await assertVisible(page.getByText(/matched:/).first(), "matched timeline content", 15000);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, "pipeline-04-timeline.png"), fullPage: true });
 
     await page.getByRole("button", { name: /生成今日手账/ }).click();
     await page.waitForURL("**/daily-canvas/demo-journey-izu**", { timeout: 10000 });
     await assertVisible(page.getByText("今日画卷").first(), "scrapbook journal", 20000);
     await page
-      .waitForFunction(() => !document.body.innerText.includes("正在把今天织成手账"), undefined, {
+      .waitForFunction(() => !document.body.innerText.includes("正在听见今天的回响"), undefined, {
         timeout: 30000,
       })
       .catch(() => {});

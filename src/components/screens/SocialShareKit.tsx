@@ -22,14 +22,14 @@ function pickLeadText(capsules: Capsule[], journalText: string) {
   if (fromJournal) return fromJournal.slice(0, 90);
 
   const fromCapsule = capsules.find((c) => c.aiContent || c.userRawText);
-  return (fromCapsule?.aiContent ?? fromCapsule?.userRawText ?? "今天的旅途被织成了一组会发光的记忆胶囊。").slice(0, 90);
+  return (fromCapsule?.aiContent ?? fromCapsule?.userRawText ?? "今天的旅途被 Conch 唤回成一组会发光的记忆胶囊。").slice(0, 90);
 }
 
 function buildTags(capsules: Capsule[]) {
   const tags = [...new Set(capsules.flatMap((c) => c.keywords ?? []))]
     .filter(Boolean)
     .slice(0, 6);
-  return tags.length > 0 ? tags : ["旅行手账", "AI旅行", "FlowMemo"];
+  return tags.length > 0 ? tags : ["旅行手账", "AI旅行", "Conch"];
 }
 
 function buildSceneLines(capsules: Capsule[]) {
@@ -81,7 +81,7 @@ export function SocialShareKit({
     lead,
     "",
     `今天收集了 ${capsules.length} 枚记忆胶囊${photoCount ? `、${photoCount} 张照片` : ""}。`,
-    `FlowMemo 用 ${styleLabel} 风格把碎片织成了一张今日画卷。`,
+    `Conch 用 ${styleLabel} 风格把碎片唤回成一张今日画卷。`,
     "",
     tags.map((tag) => `#${tag}`).join(" "),
   ].join("\n");
@@ -91,7 +91,7 @@ export function SocialShareKit({
     lead,
     "",
     `今天不是拍了很多照片，是把 ${capsules.length} 个瞬间留了下来。`,
-    "由 FlowMemo AI 织成今日画卷。",
+    "由 Conch AI 唤回今日画卷。",
   ].join("\n");
 
   const vlogScript = [

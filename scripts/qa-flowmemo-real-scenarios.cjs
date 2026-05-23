@@ -196,7 +196,6 @@ async function run() {
     await scenario("Scenario 3: inspect Pocket timeline and import a real photo", async () => {
       await page.getByRole("button", { name: /Pocket/ }).click();
       await assertVisible(page.getByText(/Day 1/).first(), "timeline day title");
-      await assertVisible(page.getByText(/matched:/).first(), "matched photo label", 15000);
 
       await page.locator('input[type="file"]').first().setInputFiles(assets.shinjukuRain);
       await assertVisible(page.getByText("已导入 1 张照片"), "photo import toast", 30000);
@@ -218,7 +217,7 @@ async function run() {
       await page.getByRole("button", { name: /生成今日手账/ }).click();
       await page.waitForURL("**/daily-canvas/demo-journey-izu**", { timeout: 12000 });
       await assertVisible(page.getByText("今日画卷").first(), "daily canvas page", 20000);
-      await waitForTextGone(page, "正在把今天织成手账", 35000);
+      await waitForTextGone(page, "正在听见今天的回响", 35000);
 
       const bodyText = await page.locator("body").innerText();
       const hasTravelDate = bodyText.includes("2026-11-08") || bodyText.includes("11月8日");

@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import type { Capsule, Journey, StyleKey } from "@/lib/journey-types";
 import { STYLE_LABELS } from "@/lib/journey-types";
 import { dateKeyToDate } from "@/lib/journey-date";
+import { DEMO_CAPSULES, DEMO_JOURNEY } from "@/lib/demo-data";
 
 export type ExportCanvasVariant = "paper" | "aqua" | "editorial";
 
@@ -102,6 +103,22 @@ function clip(value: string | null | undefined, length: number) {
   return text.length > length ? `${text.slice(0, length)}...` : text;
 }
 
+function looksMojibake(value: string | null | undefined) {
+  const text = String(value ?? "");
+  if (!text) return false;
+  if (text.includes("�")) return true;
+  const suspicious = text.match(/[锛銆鏃绱犳潗鎵嬬处鐢诲嵎涓滀含淇杽绔规灄]/g)?.length ?? 0;
+  return suspicious >= Math.max(4, Math.floor(text.length * 0.08));
+}
+
+function cleanScrapbookTitle(value: string | null | undefined, fallback = "Travel Log") {
+  const cleaned = String(value ?? fallback)
+    .replace(/^(FlowMemo|Conch)\s*/i, "")
+    .replace(/\s+/g, "")
+    .trim();
+  return clip(cleaned || fallback, 8);
+}
+
 function displayDate(travelDate: string) {
   return travelDate ? dateKeyToDate(travelDate) : new Date();
 }
@@ -183,6 +200,7 @@ function Polaroid({
   rotate = "-1deg",
   ratio = "1 / 1",
   dark = false,
+  tapeVariant = "blue",
   style,
 }: {
   photo?: Photo;
@@ -191,6 +209,7 @@ function Polaroid({
   rotate?: string;
   ratio?: string;
   dark?: boolean;
+  tapeVariant?: "blue" | "cream" | "dot";
   style?: CSSProperties;
 }) {
   return (
@@ -208,7 +227,7 @@ function Polaroid({
     >
       <Tape
         colors={colors}
-        variant={dark ? "dot" : "blue"}
+        variant={dark ? "dot" : tapeVariant}
         style={{ left: "50%", top: "-10px", transform: "translateX(-50%) rotate(3deg)" }}
       />
       <div style={{ aspectRatio: ratio, overflow: "hidden", background: colors.accentSoft }}>
@@ -393,7 +412,7 @@ function Footer({ colors, authorName, travelDate }: { colors: Colors; authorName
     >
       <div>
         <p style={{ margin: "0 0 3px", fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase" }}>
-          woven by FlowMemo AI
+          recalled by Conch AI
         </p>
         <p style={{ margin: 0, fontSize: "12px" }}>
           {authorName} · {fullDate(travelDate)}
@@ -479,9 +498,14 @@ function PaperVariant({
   authorName,
   travelDate,
 }: ExportCanvasVariantProps) {
-  const colors = palette.paper;
+  const colors = {
+    ...palette.paper,
+    accent: "#827969",
+    accentSoft: "#E7DDD0",
+    blue: "#9B9385",
+  };
   const photos = allPhotos(capsules);
-  const paragraphs = textLines(journalText, "今天的旅途被慢慢织成一页手账。");
+  const paragraphs = textLines(journalText, "今天的旅途像海声一样被慢慢唤回。");
   const keywords = [...new Set(capsules.flatMap((c) => c.keywords ?? []))].slice(0, 7);
   const leadText = clip(paragraphs.join(" "), 210);
   const destination = journey?.destination ?? "旅途";
@@ -696,7 +720,7 @@ function AquaVariant({
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <DateCircle colors={colors} travelDate={travelDate} />
             <span style={{ color: colors.accent, fontSize: "11px", fontWeight: 800, letterSpacing: "0.18em" }}>
-              FLOWMEMO
+              CONCH
             </span>
           </div>
           <span style={{ color: colors.muted, fontSize: "10px" }}>{STYLE_LABELS[activeStyle]?.label}</span>
@@ -792,7 +816,7 @@ function EditorialVariant({
             }}
           >
             <span style={{ color: colors.accent, fontSize: "11px", fontWeight: 800, letterSpacing: "0.18em" }}>
-              FLOWMEMO
+              CONCH
             </span>
             <span style={{ color: colors.muted, fontSize: "10px" }}>{STYLE_LABELS[activeStyle]?.label}</span>
           </div>
@@ -848,6 +872,8 @@ function EditorialVariant({
   );
 }
 
+// Kept temporarily for visual comparison while the paper export uses the modular collage.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function VintageCollageVariant({
   journey,
   capsules,
@@ -907,7 +933,7 @@ function VintageCollageVariant({
         </p>
 
         <div style={{ position: "absolute", left: 46, top: 92, width: 105, height: 128, background: "#E8DED0", transform: "rotate(-2deg)" }} />
-        <Polaroid photo={photoAt(0)} caption={photoAt(0)?.location ?? "memory"} rotate="-3deg" ratio="1 / 1" colors={colors} style={{ position: "absolute", left: 34, top: 116, width: 116, zIndex: 5 }} />
+        <Polaroid photo={photoAt(0)} caption={photoAt(0)?.location ?? "memory"} rotate="-3deg" ratio="1 / 1" colors={colors} tapeVariant="cream" style={{ position: "absolute", left: 34, top: 116, width: 116, zIndex: 5 }} />
         <Tape colors={colors} variant="cream" style={{ left: 24, top: 105, transform: "rotate(-8deg)", zIndex: 8 }} />
 
         <div
@@ -951,7 +977,7 @@ function VintageCollageVariant({
         <div style={{ position: "absolute", left: 61, bottom: 98, width: 126, height: 150, overflow: "hidden", background: "#D7D0C2", transform: "rotate(-1.8deg)", zIndex: 2 }}>
           {photoAt(2) && <img src={photoAt(2).url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.78) contrast(.94)" }} />}
         </div>
-        <Polaroid photo={photoAt(3)} caption={photoAt(3)?.location ?? "detail"} rotate="3deg" ratio="4 / 3" colors={colors} style={{ position: "absolute", left: 110, bottom: 92, width: 118, zIndex: 6 }} />
+        <Polaroid photo={photoAt(3)} caption={photoAt(3)?.location ?? "detail"} rotate="3deg" ratio="4 / 3" colors={colors} tapeVariant="cream" style={{ position: "absolute", left: 110, bottom: 92, width: 118, zIndex: 6 }} />
 
         <div style={{ position: "absolute", right: 38, top: 93, width: 124, height: 210, background: "rgba(214,207,190,.65)", transform: "rotate(-1deg)", zIndex: 1 }} />
         <div style={{ position: "absolute", right: 28, top: 124, width: 120, height: 142, overflow: "hidden", background: "#DDD6C9", border: "1px solid rgba(255,255,255,.88)", boxShadow: "0 8px 17px rgba(43,34,24,.14)", transform: "rotate(-2deg)", zIndex: 5 }}>
@@ -1031,8 +1057,332 @@ function VintageCollageVariant({
           </g>
         </svg>
         <p style={{ position: "absolute", right: 25, bottom: 14, margin: 0, color: "#AAA193", fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase" }}>
-          {authorName} / FlowMemo
+          {authorName} / Conch
         </p>
+      </div>
+    </CanvasShell>
+  );
+}
+
+function ModularVintageCollageVariant({
+  journey,
+  capsules,
+  journalText,
+  activeStyle,
+  authorName,
+  travelDate,
+}: ExportCanvasVariantProps) {
+  const colors: Colors = {
+    ...palette.paper,
+    page: "#F7F1E6",
+    surface: "#FFFDF7",
+    ink: "#34312B",
+    muted: "#776F63",
+    line: "#D8CCB9",
+    accent: "#8D7F6B",
+    accentSoft: "#EAE0D0",
+    blue: "#A8AEA4",
+  };
+  const demoCapsules = DEMO_CAPSULES as unknown as Capsule[];
+  const sourceJourney = journey ?? (DEMO_JOURNEY as unknown as Journey);
+  const incomingPhotos = allPhotos(capsules);
+  const shouldUseDemoFallback = incomingPhotos.length === 0;
+  const sourceCapsules = shouldUseDemoFallback ? demoCapsules : capsules;
+  const isDefaultDemoJourney =
+    shouldUseDemoFallback ||
+    sourceCapsules.some((capsule) => String(capsule.id).startsWith("demo-capsule"));
+  const photos = shouldUseDemoFallback ? allPhotos(demoCapsules) : incomingPhotos;
+  const photoAt = (index: number) => (photos.length ? photos[index % photos.length] : undefined);
+  const demoKeywords = ["竹林", "温泉", "市场", "夜色"];
+  const keywords = isDefaultDemoJourney
+    ? demoKeywords
+    : [...new Set(sourceCapsules.flatMap((c) => c.keywords ?? []))].slice(0, 4);
+  const fallbackText = isDefaultDemoJourney
+    ? "修善寺的白雾、竹林、清晨市场和东京夜色，被贴进这一页慢旅行记忆。"
+    : sourceCapsules[0]?.aiContent || sourceCapsules[0]?.userRawText || "把旅途里的碎片慢慢贴成一页。";
+  const capsuleTextSummary = sourceCapsules
+    .map((capsule) => capsule.userRawText || capsule.aiContent)
+    .filter(Boolean)
+    .join(" ");
+  const safeJournalText = looksMojibake(journalText) ? "" : journalText;
+  const sourceJournalText = isDefaultDemoJourney
+    ? fallbackText
+    : capsuleTextSummary || safeJournalText || fallbackText;
+  const noteText = clip(textLines(sourceJournalText, fallbackText).join(" "), 34);
+  const detailCapsules = sourceCapsules.slice(0, 3);
+  const detailLabels = isDefaultDemoJourney
+    ? ["修善寺竹林", "筑地清晨", "新宿雨夜"]
+    : detailCapsules.map((capsule) => capsule.title);
+  const destination = isDefaultDemoJourney ? "日本 · 伊豆 · 东京" : cleanScrapbookTitle(sourceJourney?.destination, "Travel");
+  const title = isDefaultDemoJourney ? "伊豆旅记" : cleanScrapbookTitle(sourceJourney?.destination, "Travel");
+
+  const renderPhotoBlock = ({
+    photo,
+    dark = false,
+  }: {
+    photo?: Photo;
+    dark?: boolean;
+  }) => (
+    <div
+      style={{
+        background: dark ? "#202020" : "#FFFFFF",
+        border: dark ? "1px solid #2E2C28" : `1px solid ${colors.line}`,
+        padding: "7px 7px 12px",
+        boxShadow: "0 8px 16px rgba(58,45,29,0.12)",
+        boxSizing: "border-box",
+        display: "grid",
+        gridTemplateRows: "minmax(0, 1fr)",
+        height: "100%",
+        minWidth: 0,
+        position: "relative",
+      }}
+    >
+      <Tape
+        colors={colors}
+        variant={dark ? "dot" : "cream"}
+        style={{ left: "50%", top: "-8px", transform: "translateX(-50%) rotate(-3deg)", width: 46, height: 15, opacity: 0.5 }}
+      />
+      <div style={{ minHeight: 0, overflow: "hidden", background: colors.accentSoft }}>
+        {photo ? (
+          <img
+            src={photo.url}
+            alt=""
+            crossOrigin="anonymous"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              filter: dark ? "saturate(.82) contrast(1.03)" : "saturate(.88) contrast(.98)",
+            }}
+          />
+        ) : (
+          <div style={{ height: "100%", display: "grid", placeItems: "center", color: colors.muted, fontSize: 10 }}>
+            photo
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDetailCard = (index: number) => {
+    const capsule = detailCapsules[index];
+    const photo = photoAt(index + 4);
+    const label = clip(detailLabels[index] ?? capsule?.title ?? photo?.title ?? `memo ${index + 1}`, 8);
+
+    return (
+      <div key={index} style={{ minWidth: 0, display: "grid", gridTemplateRows: "74px 18px", gap: 6 }}>
+        <div style={{ overflow: "hidden", background: colors.accentSoft, border: `1px solid ${colors.line}` }}>
+          {photo && (
+            <img
+              src={photo.url}
+              alt=""
+              crossOrigin="anonymous"
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(.82) contrast(.96)" }}
+            />
+          )}
+        </div>
+        <div
+          style={{
+            color: colors.ink,
+            fontSize: 10,
+            lineHeight: "18px",
+            height: 18,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {label}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <CanvasShell colors={colors}>
+      <div
+        style={{
+          position: "relative",
+          minHeight: "720px",
+          overflow: "hidden",
+          background:
+            "linear-gradient(90deg, transparent 0 184px, rgba(207,195,172,.44) 184px 185px, transparent 185px), #FAF5EA",
+          padding: "18px 18px 16px",
+          boxShadow: "inset 0 0 0 1px rgba(207,194,169,.44)",
+        }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "96px 1fr", gap: 12, alignItems: "start", minHeight: 76 }}>
+          <div
+            style={{
+              height: 68,
+              border: `1px solid ${colors.line}`,
+              background: "rgba(255,253,247,.72)",
+              display: "grid",
+              placeItems: "center",
+              textAlign: "center",
+              color: colors.ink,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.16em", color: colors.muted }}>DATE</div>
+              <div style={{ marginTop: 4, fontFamily: '"Nanum Myeongjo", serif', fontSize: 19, fontWeight: 700 }}>
+                {monthDay(travelDate)}
+              </div>
+            </div>
+          </div>
+          <div style={{ minWidth: 0, paddingTop: 2 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+              <span style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.2em" }}>FLOWMEMO</span>
+              <span style={{ color: colors.muted, fontSize: 8, fontWeight: 800, letterSpacing: "0.12em" }}>
+                {STYLE_LABELS[activeStyle]?.label}
+              </span>
+            </div>
+            <h1
+              style={{
+                margin: "10px 0 0",
+                color: colors.ink,
+                fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", serif',
+                fontSize: 24,
+                lineHeight: 1.12,
+                fontWeight: 400,
+                maxHeight: 54,
+                overflow: "hidden",
+                wordBreak: "break-all",
+              }}
+            >
+              {title}
+            </h1>
+            <div style={{ marginTop: 7, color: colors.muted, fontSize: 9, letterSpacing: "0.08em" }}>
+              {destination} / {fullDate(travelDate)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12, height: 292, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateRows: "178px 104px", gap: 10, minWidth: 0 }}>
+            <div style={{ transform: "rotate(-1deg)", transformOrigin: "50% 50%" }}>
+              {renderPhotoBlock({ photo: photoAt(0) })}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {renderPhotoBlock({ photo: photoAt(1), dark: true })}
+              {renderPhotoBlock({ photo: photoAt(2) })}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateRows: "126px 156px", gap: 10, minWidth: 0 }}>
+            <div style={{ transform: "rotate(1deg)", transformOrigin: "50% 50%" }}>
+              {renderPhotoBlock({ photo: photoAt(3) })}
+            </div>
+            <div
+              style={{
+                background: "rgba(255,253,247,.78)",
+                border: `1px solid ${colors.line}`,
+                padding: "12px 12px 10px",
+                minWidth: 0,
+                boxShadow: "0 7px 14px rgba(58,45,29,.08)",
+              }}
+            >
+              <div
+                style={{
+                  color: colors.muted,
+                  fontSize: 8,
+                  fontWeight: 900,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  marginBottom: 8,
+                }}
+              >
+                notebook
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  color: colors.ink,
+                  fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
+                  fontSize: 13,
+                  lineHeight: "22px",
+                  height: 88,
+                  overflow: "hidden",
+                  wordBreak: "break-all",
+                  backgroundImage:
+                    "repeating-linear-gradient(transparent, transparent 21px, rgba(91,84,72,.24) 21px, rgba(91,84,72,.24) 22px)",
+                }}
+              >
+                {noteText}
+              </p>
+              <div style={{ marginTop: 8, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>recorded by {authorName}</div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 10,
+            padding: "10px 10px 8px",
+            background: "rgba(239,230,213,.48)",
+            border: `1px solid rgba(216,204,185,.74)`,
+          }}
+        >
+          {[0, 1, 2].map((index) => renderDetailCard(index))}
+        </div>
+
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "92px 1fr", gap: 12, alignItems: "stretch" }}>
+          <div
+            style={{
+              border: `1px solid ${colors.line}`,
+              background: "rgba(255,253,247,.74)",
+              padding: "10px 8px",
+              textAlign: "center",
+              color: colors.ink,
+              minHeight: 74,
+            }}
+          >
+            <div style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.16em", color: colors.muted }}>TICKET</div>
+            <div style={{ marginTop: 8, fontFamily: '"Nanum Myeongjo", serif', fontSize: 22, lineHeight: 1, fontWeight: 700 }}>
+              {dayNumber(travelDate)}
+            </div>
+            <div style={{ marginTop: 7, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>{monthShort(travelDate)}</div>
+          </div>
+          <div
+            style={{
+              borderTop: `1px solid ${colors.line}`,
+              borderBottom: `1px solid ${colors.line}`,
+              padding: "10px 0",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              minWidth: 0,
+            }}
+          >
+            <div style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.18em" }}>SLOW TRAVEL LOG</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {(keywords.length ? keywords : ["slow", "memo", "route"]).map((keyword) => (
+                <span
+                  key={keyword}
+                  style={{
+                    maxWidth: 92,
+                    border: `1px solid rgba(119,111,99,.34)`,
+                    background: "rgba(255,253,247,.68)",
+                    color: colors.muted,
+                    padding: "4px 7px",
+                    fontSize: 8,
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {keyword}
+                </span>
+              ))}
+            </div>
+            <div style={{ marginTop: 9, color: colors.muted, fontSize: 8, letterSpacing: "0.12em" }}>{authorName} / FlowMemo</div>
+          </div>
+        </div>
+
       </div>
     </CanvasShell>
   );
@@ -1044,7 +1394,7 @@ export const ExportCanvas = forwardRef<HTMLDivElement, ExportCanvasProps>(
 
     return (
       <div ref={ref}>
-        {variant === "paper" && <VintageCollageVariant {...props} />}
+        {variant === "paper" && <ModularVintageCollageVariant {...props} />}
         {variant === "aqua" && <AquaVariant {...props} />}
         {variant === "editorial" && <EditorialVariant {...props} />}
       </div>

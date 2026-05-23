@@ -5,8 +5,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CoverScreen } from "./cover-screen";
 import { DepartureScreen } from "./DepartureScreen";
 
-export function HomeScreen() {
-  const [showCover, setShowCover] = useState(true);
+interface HomeScreenProps {
+  skipCover?: boolean;
+}
+
+export function HomeScreen({ skipCover = false }: HomeScreenProps) {
+  const [showCover, setShowCover] = useState(!skipCover);
 
   return (
     <AnimatePresence mode="wait">

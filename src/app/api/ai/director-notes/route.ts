@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       [
         {
           role: "system",
-          content: `你是织流 FlowMemo 的 AI 旅行记忆导演。你要阅读用户今天收集的旅行记忆胶囊，输出导演台建议。
+          content: `你是 Conch 的 AI 旅行回响导演。Conch 的概念是把回忆像海螺里的海声一样重现。你要阅读用户今天收集的旅行记忆胶囊，输出导演台建议。
 严格输出 JSON，不要解释：
 {
   "storyArc": "今天的故事线判断，40字以内",

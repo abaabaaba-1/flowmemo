@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   let userMessage: string;
 
   if (existingContent) {
-    systemPrompt = `你是 FlowMemo 的 AI 旅行记忆导演。请把以下旅行文案改写成新风格。
+    systemPrompt = `你是 Conch 的 AI 旅行回响导演。Conch 会像海螺重现海声一样，把旅行回忆重新唤起。请把以下旅行文案改写成新风格。
 要求：
 - ${stylePrompt}
 - 保留原文的核心事件、地点和情绪信息
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     userMessage = `原文：${existingContent}`;
   } else {
-    systemPrompt = `你是 FlowMemo 的 AI 旅行记忆导演。根据用户的旅行碎碎念，生成一段旅行记忆文案。
+    systemPrompt = `你是 Conch 的 AI 旅行回响导演。Conch 会像海螺重现海声一样，把旅行回忆重新唤起。根据用户的旅行碎碎念，生成一段旅行记忆文案。
 你需要提取：
 1. 地点信息，如果没有则留空
 2. 场景关键词，最多 5 个词

@@ -68,7 +68,7 @@ export function VlogMode({ capsules, journeyDestination }: VlogModeProps) {
 
               {/* Camera metadata */}
               <div className="absolute top-2 left-2 text-[8px] font-mono text-white/30">
-                FlowMemo · {new Date(capsule.capturedAt).toLocaleDateString("zh-CN")}
+                Conch · {new Date(capsule.capturedAt).toLocaleDateString("zh-CN")}
               </div>
             </div>
 

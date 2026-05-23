@@ -194,7 +194,7 @@ export function JourneyInputBar({ journeyId, demoMode = false, onCapsuleCreated 
             className="mb-2 flex items-center gap-2 text-[10px] text-[#E99A3F] font-mono"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#E99A3F] animate-ping" />
-            AI 导演正在织入记忆...
+            Conch 正在唤回记忆...
           </motion.div>
         )}
       </AnimatePresence>

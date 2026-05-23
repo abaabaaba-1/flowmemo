@@ -40,13 +40,13 @@ export function CoverScreen({ onStart }: CoverScreenProps) {
             className="mt-[72px] flex flex-col items-center gap-2.5 text-center sm:mt-[82px]"
           >
             <h1
-              className="m-0 text-[clamp(3.25rem,15vw,4.15rem)] font-semibold leading-[0.95] tracking-normal text-[#43556B]"
-              style={{ fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif' }}
+              className="m-0 text-[clamp(3.25rem,15vw,4.15rem)] font-bold leading-[0.95] tracking-normal text-[#43556B]"
+              style={{ fontFamily: '"Oleo Script", cursive' }}
             >
-              FlowMemo
+              Conch
             </h1>
             <p className="m-0 text-[0.94rem] font-medium tracking-[0.23em] text-[#43556B]/80">
-              织流 · AI 旅行记忆导演
+              把回忆放到耳边，听见旅途回响
             </p>
           </motion.div>
 
@@ -60,12 +60,12 @@ export function CoverScreen({ onStart }: CoverScreenProps) {
               <span className="absolute inset-5 rounded-full bg-[radial-gradient(circle,rgba(255,243,184,0.54),rgba(255,243,184,0))] blur-[18px]" />
               <span className="absolute inset-x-0 bottom-0 top-[30px] translate-x-6 rounded-full bg-[radial-gradient(circle,rgba(200,226,247,0.44),rgba(200,226,247,0))] blur-[20px]" />
               <Image
-                src="/conch-shell.svg"
+                src="/conch-hero.png"
                 alt=""
-                width={260}
-                height={260}
+                width={300}
+                height={300}
                 priority
-                className="relative h-auto w-full max-w-[260px] drop-shadow-[0_18px_26px_rgba(124,96,58,0.12)]"
+                className="relative h-auto w-full max-w-[286px] drop-shadow-[0_18px_26px_rgba(124,96,58,0.12)]"
               />
             </motion.div>
           </div>

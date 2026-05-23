@@ -72,7 +72,7 @@ function fallbackJournal(destination: string, capsules: CanvasCapsule[], style: 
   return [
     `${styleLead[style] ?? styleLead.cinematic}，${destination}不是一个抽象目的地，而是由一枚枚记忆胶囊连起来的现场。`,
     ...paragraphs,
-    "这些片段被 FlowMemo 串成今日画卷后，不再只是照片和碎碎念，而是一条可以被回看、被分享、也能继续生长的旅行故事线。",
+    "这些片段被 Conch 像海声一样唤回成今日画卷后，不再只是照片和碎碎念，而是一条可以被回看、被分享、也能继续生长的旅行故事线。",
   ].join("\n\n");
 }
 
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
   const messages = [
     {
       role: "system" as const,
-      content: `你是 FlowMemo 的 AI 旅行记忆导演。根据用户今天的旅行记忆胶囊，生成一篇完整的“今日画卷”手账正文。
+      content: `你是 Conch 的 AI 旅行回响导演。Conch 的概念是把回忆像海螺里的海声一样重现。根据用户今天的旅行记忆胶囊，生成一篇完整的“今日画卷”手账正文。
 要求：
 - 风格：${styleMap[style] ?? styleMap.cinematic}
 - 以整体旅程为线索，把各个胶囊串联成有故事线的旅行叙述

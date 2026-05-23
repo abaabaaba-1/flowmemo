@@ -73,7 +73,7 @@ export function CapsuleCard({ capsule, onStyleChange, isNew, demoMode = false }:
               {capsule.location ?? "未知地点"}
             </span>
             <span className="font-mono text-[9px] text-[#494954]">
-              {capsule.photoCount} 张 · FlowMemo
+              {capsule.photoCount} 张 · Conch
             </span>
           </div>
           {/* Film notches */}

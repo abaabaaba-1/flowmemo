@@ -6,7 +6,7 @@ import { nanoid } from "@/lib/utils";
 
 export function buildMcpServer(userId: string): McpServer {
   const server = new McpServer({
-    name: "flowmemo",
+    name: "conch",
     version: "1.0.0",
   });
 

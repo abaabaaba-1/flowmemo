@@ -12,7 +12,7 @@ export default function ScrapbookVariantsPage() {
     <main className="min-h-svh bg-[#EDE4D5] px-6 py-8 text-[#2F2924]">
       <div className="mx-auto max-w-[1280px]">
         <header className="mb-8">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-[#C86B4A]">FlowMemo</p>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-[#C86B4A]">Conch</p>
           <h1 className="mt-3 text-3xl font-black tracking-normal">手账导出视觉候选</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#7E7368]">
             这三版都避开黑色电影海报，改成暖色纸张、旅行本和轻杂志方向。
