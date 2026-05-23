@@ -4,9 +4,10 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImagePlus, Send, X } from "lucide-react";
 import { storage } from "@eazo/sdk";
-import { request } from "@/lib/api/request";
+import { analyzeImage, composeCapsuleDraft, createJourneyCapsule } from "@/lib/api";
 import { sanitizeDemoCapsuleDraft } from "@/lib/demo-guardrails";
 import { DEMO_PIPELINE_INPUTS } from "@/lib/demo-data";
+import { compressImageToDataUrl, fileToBase64 } from "@/utils/image-upload";
 import { toast } from "sonner";
 
 interface InputBarProps {
@@ -54,29 +55,11 @@ export function JourneyInputBar({ journeyId, demoMode = false, onCapsuleCreated 
       let aiResult: { title?: string; location?: string; keywords?: string[]; content?: string } = {};
 
       if (text.trim()) {
-        const composeRes = await fetch("/api/ai/compose", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userText: text.trim(), style: "cinematic", demoMode }),
+        aiResult = await composeCapsuleDraft({
+          userText: text.trim(),
+          style: "cinematic",
+          demoMode,
         });
-
-        if (composeRes.ok) {
-          let rawText = "";
-          const reader = composeRes.body!.getReader();
-          const decoder = new TextDecoder();
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            rawText += decoder.decode(value, { stream: true });
-          }
-
-          try {
-            const cleaned = rawText.replace(/```json\n?|\n?```/g, "").trim();
-            aiResult = JSON.parse(cleaned);
-          } catch {
-            aiResult = { title: "旅途记忆", content: rawText };
-          }
-        }
       }
 
       // Analyze first photo if no text
@@ -84,26 +67,17 @@ export function JourneyInputBar({ journeyId, demoMode = false, onCapsuleCreated 
         try {
           const firstFile = photos[0]?.file;
           if (!firstFile) throw new Error("missing image file");
-          const fileReader = new FileReader();
-          const base64 = await new Promise<string>((resolve) => {
-            fileReader.onload = (e) => resolve((e.target?.result as string).split(",")[1]);
-            fileReader.readAsDataURL(firstFile);
+          const base64 = await fileToBase64(firstFile);
+          const imgData = await analyzeImage({
+            imageBase64: base64,
+            mimeType: firstFile.type,
           });
 
-          const analyzeRes = await request("/api/ai/analyze-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageBase64: base64, mimeType: firstFile.type }),
-          });
-
-          if (analyzeRes.ok) {
-            const imgData = await analyzeRes.json();
-            aiResult = {
-              title: imgData.scene ?? "旅途一瞥",
-              keywords: imgData.tags ?? [],
-              content: imgData.suggestedCaption ?? "",
-            };
-          }
+          aiResult = {
+            title: imgData.scene ?? "旅途一瞥",
+            keywords: imgData.tags ?? [],
+            content: imgData.suggestedCaption ?? "",
+          };
         } catch {
           aiResult = { title: "旅途一瞥", content: "镜头捕捉到的美丽瞬间。" };
         }
@@ -152,21 +126,14 @@ export function JourneyInputBar({ journeyId, demoMode = false, onCapsuleCreated 
         return;
       }
 
-      const capsuleRes = await request(`/api/journeys/${journeyId}/capsules`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: aiResult.title ?? "旅途记忆",
-          location: aiResult.location ?? "",
-          userRawText: text.trim(),
-          aiContent: aiResult.content ?? "",
-          keywords: aiResult.keywords ?? [],
-          photoUrls,
-        }),
+      const capsule = await createJourneyCapsule(journeyId, {
+        title: aiResult.title ?? "旅途记忆",
+        location: aiResult.location ?? "",
+        userRawText: text.trim(),
+        aiContent: aiResult.content ?? "",
+        keywords: aiResult.keywords ?? [],
+        photoUrls,
       });
-
-      if (!capsuleRes.ok) throw new Error("保存失败");
-      const capsule = await capsuleRes.json();
       onCapsuleCreated(capsule);
       setText("");
       setPhotos([]);
@@ -180,30 +147,29 @@ export function JourneyInputBar({ journeyId, demoMode = false, onCapsuleCreated 
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    const newPhotos = demoMode
-      ? await Promise.all(
-          files.map(
-            (file) =>
-              new Promise<PhotoDraft>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                  resolve({
-                    file,
-                    preview: String(event.target?.result ?? ""),
-                    url: String(event.target?.result ?? ""),
-                    name: file.name,
-                  });
-                };
-                reader.readAsDataURL(file);
-              })
+    try {
+      const newPhotos = demoMode
+        ? await Promise.all(
+            files.map(async (file) => {
+              const dataUrl = await compressImageToDataUrl(file);
+              return {
+                file,
+                preview: dataUrl,
+                url: dataUrl,
+                name: file.name,
+              };
+            })
           )
-        )
-      : files.map((file) => ({
-          file,
-          preview: URL.createObjectURL(file),
-        }));
-    setPhotos((prev) => [...prev, ...newPhotos].slice(0, 6));
-    e.currentTarget.value = "";
+        : files.map((file) => ({
+            file,
+            preview: URL.createObjectURL(file),
+          }));
+      setPhotos((prev) => [...prev, ...newPhotos].slice(0, 6));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "图片处理失败");
+    } finally {
+      e.currentTarget.value = "";
+    }
   }
 
   function removePhoto(idx: number) {

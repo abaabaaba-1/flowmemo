@@ -9,6 +9,13 @@ async function assertVisible(locator, label, timeout = 10000) {
   });
 }
 
+async function dismissCoverIfPresent(page) {
+  await page
+    .getByRole("button", { name: /开启旅程/ })
+    .click({ timeout: 3000 })
+    .catch(() => {});
+}
+
 async function run() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -16,6 +23,7 @@ async function run() {
   try {
     await page.addInitScript(() => window.localStorage.clear());
     await page.goto(BASE_URL, { waitUntil: "networkidle" });
+    await dismissCoverIfPresent(page);
     await assertVisible(page.getByText("启程前，把旅程线索先交给我"), "onboarding title");
     await page.screenshot({ path: "artifacts/pipeline-01-onboarding.png", fullPage: true });
 

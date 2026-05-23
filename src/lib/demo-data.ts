@@ -19,6 +19,10 @@ export const DEMO_PHOTOS = {
 export const DEMO_JOURNEY = {
   id: "demo-journey-izu",
   destination: "日本 · 伊豆 · 东京",
+  destinationCountryRegion: "日本",
+  destinationCity: "伊豆",
+  destinationPlace: "修善寺 · 东京",
+  destinationNote: "",
   description: "伊豆海岸 · 修善寺温泉街 · 筑地 · 新宿",
   startDate: new Date("2026-11-08T00:00:00"),
   endDate: new Date("2026-11-14T00:00:00"),
@@ -229,6 +233,10 @@ export const DEMO_CHAT_PROMPTS = [
 
 export const DEMO_ITINERARY_IMPORT = {
   destination: "日本 · 伊豆 · 东京",
+  destinationCountryRegion: "日本",
+  destinationCity: "伊豆",
+  destinationPlace: "修善寺 · 东京",
+  destinationNote: "",
   startDate: "2026-11-08",
   endDate: "2026-11-14",
   title: "伊豆 · 修善寺 · 东京",

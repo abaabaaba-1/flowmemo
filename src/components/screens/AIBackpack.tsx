@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronDown, Clapperboard, Lightbulb, Package, Sparkles } from "lucide-react";
 import type { Capsule } from "@/lib/journey-types";
 import { useRouter } from "next/navigation";
-import { request } from "@/lib/api/request";
+import { getDirectorNotes } from "@/lib/api";
 
 interface AIBackpackProps {
   journeyId: string;
@@ -60,26 +60,11 @@ export function AIBackpack({ journeyId, capsules, destination, isOpen, onToggle 
     Promise.resolve()
       .then(() => {
         if (!cancelled) setIsLoadingNotes(true);
-        return request("/api/ai/director-notes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            journeyId,
-            destination,
-            capsules: capsules.map((capsule) => ({
-              title: capsule.title,
-              location: capsule.location,
-              userRawText: capsule.userRawText,
-              aiContent: capsule.aiContent,
-              keywords: capsule.keywords,
-              photoCount: capsule.photoCount,
-            })),
-          }),
+        return getDirectorNotes({
+          journeyId,
+          destination,
+          capsules,
         });
-      })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("director notes failed");
-        return (await res.json()) as DirectorNotes;
       })
       .then((notes) => {
         if (!cancelled) setDirectorNotes(notes);

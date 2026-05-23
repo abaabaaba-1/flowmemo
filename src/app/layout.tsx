@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "织流 FlowMemo — AI 旅行记忆导演",
   description: "随手说拍，AI 自动编织成高颜值旅行手账与 Vlog 图片集，直接发到社交平台。",
   icons: {
-    icon: "https://eazo.ai/favicon.ico",
+    icon: "/favicon.svg",
   },
   openGraph: {
     type: "website",

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { auth } from "@eazo/sdk";
 import { useEazo } from "@eazo/sdk/react";
+import { fetchUserProfile } from "@/lib/api";
 
 /**
  * Mobile-only: hits /api/user/profile once after login to upsert the user
@@ -24,14 +25,9 @@ export function UserSyncEffect() {
 
     syncedUserId.current = userId;
 
-      (async () => {
+    (async () => {
       try {
-        const sessionHeader = await auth.getSessionHeader();
-        if (!sessionHeader) return;
-
-        await fetch("/api/user/profile", {
-          headers: { "x-eazo-session": sessionHeader },
-        });
+        await fetchUserProfile();
       } catch (err) {
         console.error("[UserSyncEffect] profile fetch failed", err);
       }

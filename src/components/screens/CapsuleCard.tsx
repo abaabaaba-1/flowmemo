@@ -5,6 +5,7 @@ import { Mic, Check } from "lucide-react";
 import type { Capsule } from "@/lib/journey-types";
 import { STYLE_LABELS } from "@/lib/journey-types";
 import type { StyleKey } from "@/lib/journey-types";
+import { rewriteCapsuleContent } from "@/lib/api";
 import { useState } from "react";
 
 interface CapsuleCardProps {
@@ -28,24 +29,12 @@ export function CapsuleCard({ capsule, onStyleChange, isNew, demoMode = false }:
     setIsFlipped(false);
 
     try {
-      const res = await fetch("/api/ai/compose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existingContent: capsule.aiContent, style, demoMode }),
+      const accumulated = await rewriteCapsuleContent({
+        existingContent: capsule.aiContent,
+        style,
+        demoMode,
+        onChunk: setDisplayContent,
       });
-
-      if (!res.ok) throw new Error();
-
-      let accumulated = "";
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setDisplayContent(accumulated);
-      }
 
       setActiveStyle(style);
       onStyleChange?.(capsule.id, style, accumulated);

@@ -7,6 +7,10 @@ export const journeys = pgTable(
     id: varchar("id", { length: 128 }).primaryKey(),
     userId: varchar("user_id", { length: 128 }).notNull(),
     destination: text("destination").notNull(),
+    destinationCountryRegion: text("destination_country_region"),
+    destinationCity: text("destination_city"),
+    destinationPlace: text("destination_place"),
+    destinationNote: text("destination_note"),
     description: text("description"),
     startDate: timestamp("start_date").notNull().defaultNow(),
     endDate: timestamp("end_date"),
@@ -17,6 +21,7 @@ export const journeys = pgTable(
   },
   (table) => ({
     userIdIdx: index("journeys_user_id_idx").on(table.userId),
+    destinationCityIdx: index("journeys_destination_city_idx").on(table.destinationCity),
     createdAtIdx: index("journeys_created_at_idx").on(table.createdAt),
   })
 );

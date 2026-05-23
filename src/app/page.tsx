@@ -1,5 +1,5 @@
-import { DepartureScreen } from "@/components/screens/DepartureScreen";
+import { HomeScreen } from "@/components/screens/home-screen";
 
 export default function Home() {
-  return <DepartureScreen />;
+  return <HomeScreen />;
 }

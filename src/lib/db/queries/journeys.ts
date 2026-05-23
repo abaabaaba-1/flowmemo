@@ -34,6 +34,10 @@ export async function createJourney(data: {
   id: string;
   userId: string;
   destination: string;
+  destinationCountryRegion?: string;
+  destinationCity?: string;
+  destinationPlace?: string;
+  destinationNote?: string;
   description?: string;
   startDate?: Date;
   endDate?: Date | null;
@@ -45,6 +49,10 @@ export async function createJourney(data: {
       id: data.id,
       userId: data.userId,
       destination: data.destination,
+      destinationCountryRegion: data.destinationCountryRegion || null,
+      destinationCity: data.destinationCity || null,
+      destinationPlace: data.destinationPlace || null,
+      destinationNote: data.destinationNote || null,
       description: data.description ?? null,
       startDate: data.startDate ?? new Date(),
       endDate: data.endDate ?? null,

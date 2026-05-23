@@ -4,6 +4,15 @@ import type { Journey } from "@/lib/db/schema/journeys";
 export type { Capsule, Journey };
 
 export type StyleKey = "cinematic" | "healing" | "xiaohongshu" | "poetic" | "funny";
+export type CapsuleEventType = "text" | "audio" | "photo" | "video" | "mixed";
+
+export const CAPSULE_EVENT_TYPES: CapsuleEventType[] = [
+  "text",
+  "audio",
+  "photo",
+  "video",
+  "mixed",
+];
 
 export const STYLE_LABELS: Record<StyleKey, { label: string; desc: string }> = {
   cinematic: { label: "电影旁白", desc: "沉浸、有画面感" },

@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import { getCapsulesByJourney } from "@/lib/db/queries/capsules";
 import { getJourneyById } from "@/lib/db/queries/journeys";
 import { generateAIText, streamAIText } from "@/lib/ai/text-provider";
+import { dateKeyToDate, toDateKey } from "@/lib/journey-date";
 
 type CanvasCapsule = {
   title: string;
@@ -78,6 +79,7 @@ function fallbackJournal(destination: string, capsules: CanvasCapsule[], style: 
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { journeyId, style = "cinematic", demoMode = false } = body;
+  const travelDateKey = toDateKey(body.travelDate);
 
   if (!journeyId) {
     return NextResponse.json({ error: "缺少旅程 ID" }, { status: 400 });
@@ -96,7 +98,9 @@ export async function POST(request: NextRequest) {
 
     const [dbJourney, dbCapsules] = await Promise.all([
       getJourneyById(journeyId, userId),
-      getCapsulesByJourney(journeyId, userId),
+      getCapsulesByJourney(journeyId, userId, {
+        ...(travelDateKey ? { travelDate: dateKeyToDate(travelDateKey) } : {}),
+      }),
     ]);
     journey = dbJourney;
     capsules = dbCapsules;

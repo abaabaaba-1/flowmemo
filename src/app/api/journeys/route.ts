@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getActiveJourney, getJourneysByUser, getJourneyById, createJourney } from "@/lib/db/queries/journeys";
+import { standardizeDestinationLocal } from "@/lib/destination";
 import { nanoid } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
@@ -32,9 +33,10 @@ export async function POST(request: NextRequest) {
   const { id: userId } = auth.user;
 
   const body = await request.json();
-  const { destination, description, startDate, endDate } = body;
+  const { description, startDate, endDate } = body;
+  const standardizedDestination = standardizeDestinationLocal(body);
 
-  if (!destination?.trim()) {
+  if (!standardizedDestination.destination) {
     return NextResponse.json({ error: "目的地不能为空" }, { status: 400 });
   }
 
@@ -49,11 +51,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "返程日期无效" }, { status: 400 });
   }
 
+  if (parsedEndDate && parsedEndDate.getTime() < parsedStartDate.getTime()) {
+    return NextResponse.json({ error: "返程日期不能早于出发日期" }, { status: 400 });
+  }
+
   const journey = await createJourney({
     id: nanoid(),
     userId,
-    destination: destination.trim(),
-    description: description?.trim(),
+    destination: standardizedDestination.destination,
+    destinationCountryRegion: standardizedDestination.destinationCountryRegion,
+    destinationCity: standardizedDestination.destinationCity,
+    destinationPlace: standardizedDestination.destinationPlace,
+    destinationNote: standardizedDestination.destinationNote,
+    description: typeof description === "string" ? description.trim() : undefined,
     startDate: parsedStartDate,
     endDate: parsedEndDate,
   });
