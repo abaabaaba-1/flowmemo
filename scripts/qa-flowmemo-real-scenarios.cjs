@@ -123,7 +123,7 @@ async function run() {
       await page.addInitScript(() => window.localStorage.clear());
       await page.goto(BASE_URL, { waitUntil: "networkidle" });
       await dismissCoverIfPresent(page);
-      await assertVisible(page.getByText("启程前，把旅程线索先交给我"), "onboarding title");
+      await assertVisible(page.getByText("请填写").first(), "onboarding title");
 
       const dates = page.locator('input[type="date"]');
       const startDate = dates.nth(0);
@@ -147,7 +147,7 @@ async function run() {
       assert((await startDate.getAttribute("max")) === null, "去程不应被返程 max 卡住");
 
       await page.locator("input:not([type])").first().fill("");
-      await page.getByRole("button", { name: /开启织流/ }).click();
+      await page.getByRole("button", { name: /开始记录/ }).click();
       await assertVisible(page.getByText("请先补齐出行日期和目的地"), "missing destination toast", 5000);
       assert(!page.url().includes("/journey/"), `空目的地仍然跳转：${page.url()}`);
       await screenshot(page, "00-onboarding-guards");
@@ -158,13 +158,13 @@ async function run() {
       await page.addInitScript(() => window.localStorage.clear());
       await page.goto(BASE_URL, { waitUntil: "networkidle" });
       await dismissCoverIfPresent(page);
-      await assertVisible(page.getByText("启程前，把旅程线索先交给我"), "onboarding title");
+      await assertVisible(page.getByText("请填写").first(), "onboarding title");
       await page.locator('input[type="file"]').first().setInputFiles(assets.itinerary);
       await assertVisible(page.getByText(path.basename(assets.itinerary)), "imported itinerary filename");
       await screenshot(page, "01-itinerary-import");
       report.artifacts.push("qa-01-itinerary-import.png");
 
-      await page.getByRole("button", { name: /开启织流/ }).click();
+      await page.getByRole("button", { name: /开始记录/ }).click();
       await page.waitForURL("**/journey/demo-journey-izu", { timeout: 12000 });
       await assertVisible(page.getByText("聊天"), "chat tab");
       await assertVisible(page.getByRole("button", { name: /按住/ }), "voice-first input");

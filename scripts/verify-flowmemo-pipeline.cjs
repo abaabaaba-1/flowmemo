@@ -24,10 +24,10 @@ async function run() {
     await page.addInitScript(() => window.localStorage.clear());
     await page.goto(BASE_URL, { waitUntil: "networkidle" });
     await dismissCoverIfPresent(page);
-    await assertVisible(page.getByText("启程前，把旅程线索先交给我"), "onboarding title");
+    await assertVisible(page.getByText("请填写").first(), "onboarding title");
     await page.screenshot({ path: "artifacts/pipeline-01-onboarding.png", fullPage: true });
 
-    await page.getByRole("button", { name: /开启织流/ }).click();
+    await page.getByRole("button", { name: /开始记录/ }).click();
     await page.waitForURL("**/journey/demo-journey-izu", { timeout: 10000 });
     await assertVisible(page.getByText("聊天"), "chat tab");
     await assertVisible(page.getByRole("button", { name: "按住说话" }), "voice-first input");
