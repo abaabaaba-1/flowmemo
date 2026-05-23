@@ -34,6 +34,8 @@ type Photo = {
   url: string;
   title: string;
   location?: string | null;
+  keywords?: string[] | null;
+  text?: string | null;
 };
 
 type Colors = {
@@ -81,12 +83,21 @@ const palette: Record<ExportCanvasVariant, Colors> = {
 };
 
 function allPhotos(capsules: Capsule[]) {
+  const seen = new Set<string>();
   return capsules.flatMap((capsule) =>
-    (capsule.photoUrls ?? []).map((url) => ({
-      url,
-      title: capsule.title,
-      location: capsule.location,
-    }))
+    (capsule.photoUrls ?? []).flatMap((url) => {
+      if (seen.has(url)) return [];
+      seen.add(url);
+      return [
+        {
+          url,
+          title: capsule.title,
+          location: capsule.location,
+          keywords: capsule.keywords,
+          text: capsule.userRawText || capsule.aiContent,
+        },
+      ];
+    })
   );
 }
 
@@ -1117,7 +1128,14 @@ function ModularVintageCollageVariant({
   const cleanLabel = (value: string | null | undefined) => {
     const text = cleanStoryText(value);
     if (!text) return "";
-    if (/^(导入的照片素材|导入的现场素材|导入的视频片段|照片素材|视频素材|photo|upload)$/i.test(text)) {
+    const normalized = text.replace(/[\s·/｜|]+/g, "").toLowerCase();
+    if (/^(导入的照片素材|导入的现场素材|导入的视频片段|照片素材|视频素材|素材|照片|视频|photo|upload)$/i.test(text)) {
+      return "";
+    }
+    if (
+      ["东京", "日本", "旅途中", "travel", "tokyo", "conch"].includes(normalized) ||
+      normalized === destination.replace(/[\s·/｜|]+/g, "").toLowerCase()
+    ) {
       return "";
     }
     return text;
@@ -1130,17 +1148,6 @@ function ModularVintageCollageVariant({
     narrativeLines[0],
     fallbackText
   );
-  const closingText = pickStoryText(
-    sourceCapsules[1]?.userRawText,
-    narrativeLines[1],
-    sourceCapsules[1]?.aiContent,
-    narrativeLines[0],
-    fallbackText
-  );
-  const detailCapsules = sourceCapsules.slice(0, 3);
-  const detailLabels = isDefaultDemoJourney
-    ? ["修善寺竹林", "筑地清晨", "新宿雨夜"]
-    : detailCapsules.map((capsule) => capsule.location || capsule.title);
   const destination = isDefaultDemoJourney ? "日本 · 伊豆 · 东京" : cleanScrapbookTitle(sourceJourney?.destination, "Travel", 16);
   const destinationTitle = isDefaultDemoJourney ? "伊豆旅记" : cleanScrapbookTitle(sourceJourney?.destination, "Travel", 10);
   const title = destinationTitle.length <= 4 ? `${destinationTitle}一页` : destinationTitle;
@@ -1148,22 +1155,40 @@ function ModularVintageCollageVariant({
     [...new Set(sourceCapsules.map((capsule) => capsule.location).filter(Boolean))]
       .slice(0, 3)
       .join(" / ") || destination;
-  const noteFontSize = noteText.length > 86 ? 11 : noteText.length > 62 ? 12 : 13;
-  const closingFontSize = closingText.length > 88 ? 10.5 : 11.5;
-  const footerKeywords = (keywords.length ? keywords : ["memory", "echo"]).slice(0, 5);
-  const photoCaption = (photo: Photo | undefined, fallbackLabel: string) =>
-    cleanLabel(photo?.location) || cleanLabel(photo?.title) || fallbackLabel;
+  const noteFontSize = noteText.length > 96 ? 10.5 : noteText.length > 72 ? 11.5 : 12.5;
+  const noteLineHeight = noteText.length > 96 ? "17px" : noteText.length > 72 ? "18px" : "20px";
+  const narrativeSource = `${sourceJournalText} ${sourceCapsules
+    .map((capsule) => `${capsule.userRawText ?? ""} ${capsule.aiContent ?? ""}`)
+    .join(" ")}`;
+  const inferredScenes = [
+    /雨夜|湿漉漉|路口/.test(narrativeSource) ? "雨夜路口" : "",
+    /霓虹|倒影/.test(narrativeSource) ? "霓虹倒影" : "",
+    /神社|灯笼|夜灯/.test(narrativeSource) ? "神社夜灯" : "",
+    /寿司|筑地|金枪鱼|山葵/.test(narrativeSource) ? "寿司早餐" : "",
+    /伞|人群/.test(narrativeSource) ? "伞下人流" : "",
+  ].filter(Boolean);
+  const cleanedKeywords = [...keywords, ...sourceCapsules.flatMap((capsule) => capsule.keywords ?? [])]
+    .map((keyword) => cleanLabel(keyword))
+    .filter(
+      (keyword) =>
+        keyword &&
+        /[\u4e00-\u9fa5]/.test(keyword) &&
+        !/^(素材|照片|视频|图片|导入|photo|video|tokyo|travel|memory|echo)$/i.test(keyword)
+    );
+  const contextualKeywords = [...new Set([...inferredScenes, ...cleanedKeywords])].slice(0, 5);
+  const footerKeywords = contextualKeywords.length ? contextualKeywords : ["旅途片刻", "回声"];
+  const routeSummary = `今日线索：${footerKeywords.join(" / ")}。`;
 
   const renderPhotoBlock = ({
     photo,
     dark = false,
-    caption,
+    imageRatio = "4 / 3",
     rotate = "0deg",
     style,
   }: {
     photo?: Photo;
     dark?: boolean;
-    caption?: string;
+    imageRatio?: string;
     rotate?: string;
     style?: CSSProperties;
   }) => (
@@ -1171,12 +1196,9 @@ function ModularVintageCollageVariant({
       style={{
         background: dark ? "#202020" : "#FFFFFF",
         border: dark ? "1px solid #2E2C28" : `1px solid ${colors.line}`,
-        padding: caption ? "7px 7px 10px" : "7px",
+        padding: dark ? "7px" : "8px",
         boxShadow: "0 10px 18px rgba(58,45,29,0.14)",
         boxSizing: "border-box",
-        display: "grid",
-        gridTemplateRows: caption ? "minmax(0, 1fr) auto" : "minmax(0, 1fr)",
-        gap: caption ? 6 : 0,
         margin: 0,
         minWidth: 0,
         position: "relative",
@@ -1189,7 +1211,14 @@ function ModularVintageCollageVariant({
         variant={dark ? "dot" : "cream"}
         style={{ left: "50%", top: "-8px", transform: "translateX(-50%) rotate(-3deg)", width: 46, height: 15, opacity: 0.5 }}
       />
-      <div style={{ minHeight: 0, overflow: "hidden", background: colors.accentSoft }}>
+      <div
+        style={{
+          aspectRatio: imageRatio,
+          minHeight: 0,
+          overflow: "hidden",
+          background: colors.accentSoft,
+        }}
+      >
         {photo ? (
           <img
             src={photo.url}
@@ -1211,30 +1240,11 @@ function ModularVintageCollageVariant({
           </div>
         )}
       </div>
-      {caption && (
-        <figcaption
-          style={{
-            color: dark ? "#E8D7B8" : colors.ink,
-            fontSize: 9.5,
-            lineHeight: "13px",
-            minHeight: 13,
-            wordBreak: "break-all",
-            fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
-          }}
-        >
-          {caption}
-        </figcaption>
-      )}
     </figure>
   );
 
   const renderDetailCard = (index: number, style: CSSProperties, rotate: string) => {
-    const capsule = detailCapsules[index];
     const photo = photoAt(index + 4);
-    const label =
-      cleanLabel(detailLabels[index]) ||
-      cleanLabel(capsule?.title) ||
-      photoCaption(photo, `片段 ${index + 1}`);
 
     return (
       <div
@@ -1242,9 +1252,6 @@ function ModularVintageCollageVariant({
         style={{
           position: "absolute",
           minWidth: 0,
-          display: "grid",
-          gridTemplateRows: "74px auto",
-          gap: 6,
           transform: `rotate(${rotate})`,
           ...style,
         }}
@@ -1255,6 +1262,7 @@ function ModularVintageCollageVariant({
             background: colors.accentSoft,
             border: `1px solid ${colors.line}`,
             boxShadow: "0 6px 12px rgba(58,45,29,0.10)",
+            aspectRatio: "4 / 3",
           }}
         >
           {photo && (
@@ -1273,17 +1281,6 @@ function ModularVintageCollageVariant({
               }}
             />
           )}
-        </div>
-        <div
-          style={{
-            color: colors.ink,
-            fontSize: 10,
-            lineHeight: "13px",
-            wordBreak: "break-all",
-            fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
-          }}
-        >
-          {label}
         </div>
       </div>
     );
@@ -1382,39 +1379,39 @@ function ModularVintageCollageVariant({
 
         {renderPhotoBlock({
           photo: photoAt(0),
-          caption: photoCaption(photoAt(0), "旅途主镜头"),
+          imageRatio: "4 / 5",
           rotate: "-2.2deg",
-          style: { position: "absolute", left: 22, top: 116, width: 176, height: 226, zIndex: 5 },
+          style: { position: "absolute", left: 22, top: 116, width: 172, zIndex: 5 },
         })}
         {renderPhotoBlock({
           photo: photoAt(3),
-          caption: photoCaption(photoAt(3), "路上的颜色"),
+          imageRatio: "16 / 10",
           rotate: "1.8deg",
-          style: { position: "absolute", right: 22, top: 106, width: 144, height: 112, zIndex: 4 },
+          style: { position: "absolute", right: 22, top: 108, width: 144, zIndex: 4 },
         })}
         {renderPhotoBlock({
           photo: photoAt(1),
           dark: true,
+          imageRatio: "1 / 1",
           rotate: "-3deg",
-          style: { position: "absolute", left: 32, top: 350, width: 78, height: 96, zIndex: 6 },
+          style: { position: "absolute", left: 34, top: 346, width: 78, zIndex: 6 },
         })}
         {renderPhotoBlock({
           photo: photoAt(2),
-          caption: photoCaption(photoAt(2), "雨后的街角"),
+          imageRatio: "1 / 1",
           rotate: "2.4deg",
-          style: { position: "absolute", left: 122, top: 356, width: 86, height: 90, zIndex: 5 },
+          style: { position: "absolute", left: 124, top: 352, width: 86, zIndex: 5 },
         })}
 
         <section
           style={{
             position: "absolute",
             right: 20,
-            top: 234,
+            top: 232,
             width: 142,
-            minHeight: 170,
             border: `1px solid ${colors.line}`,
             background: "rgba(255,253,247,.84)",
-            padding: "14px 14px 12px",
+            padding: "13px 14px 11px",
             transform: "rotate(-0.8deg)",
             boxShadow: "0 9px 18px rgba(58,45,29,.09)",
             zIndex: 6,
@@ -1439,10 +1436,10 @@ function ModularVintageCollageVariant({
               color: colors.ink,
               fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
               fontSize: noteFontSize,
-              lineHeight: noteText.length > 86 ? "18px" : "21px",
+              lineHeight: noteLineHeight,
               wordBreak: "break-all",
               backgroundImage:
-                "repeating-linear-gradient(transparent, transparent 20px, rgba(91,84,72,.18) 20px, rgba(91,84,72,.18) 21px)",
+                "repeating-linear-gradient(transparent, transparent 18px, rgba(91,84,72,.18) 18px, rgba(91,84,72,.18) 19px)",
             }}
           >
             {noteText}
@@ -1455,8 +1452,8 @@ function ModularVintageCollageVariant({
             position: "absolute",
             left: 18,
             right: 18,
-            top: 466,
-            height: 106,
+            top: 474,
+            height: 96,
             background: "rgba(239,230,213,.38)",
             border: `1px solid rgba(216,204,185,.58)`,
             transform: "rotate(0.4deg)",
@@ -1464,9 +1461,9 @@ function ModularVintageCollageVariant({
           }}
         >
           <Tape colors={colors} variant="dot" style={{ left: 42, top: -8, width: 50, height: 15, transform: "rotate(-6deg)", opacity: 0.5 }} />
-          {renderDetailCard(0, { left: 18, top: 16, width: 84 }, "-1.8deg")}
-          {renderDetailCard(1, { left: 128, top: 10, width: 82 }, "1.2deg")}
-          {renderDetailCard(2, { right: 18, top: 15, width: 82 }, "-0.7deg")}
+          {renderDetailCard(0, { left: 20, top: 14, width: 84 }, "-1.8deg")}
+          {renderDetailCard(1, { left: 128, top: 9, width: 82 }, "1.2deg")}
+          {renderDetailCard(2, { right: 20, top: 14, width: 82 }, "-0.7deg")}
         </div>
 
         <div
@@ -1474,8 +1471,8 @@ function ModularVintageCollageVariant({
             position: "absolute",
             left: 20,
             right: 20,
-            bottom: 32,
-            minHeight: 108,
+            top: 590,
+            height: 94,
             display: "grid",
             gridTemplateColumns: "74px 1fr",
             gap: 12,
@@ -1510,40 +1507,23 @@ function ModularVintageCollageVariant({
               padding: "10px 0 9px",
             }}
           >
-              <div style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.18em" }}>MEMORY ROUTE</div>
+              <div style={{ color: colors.muted, fontSize: 8, fontWeight: 900, letterSpacing: "0.18em" }}>TODAY THREAD</div>
               <p
                 style={{
                   margin: "8px 0 0",
                   color: colors.ink,
                   fontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", serif',
-                  fontSize: closingFontSize,
+                  fontSize: 11.5,
                   lineHeight: "18px",
                   wordBreak: "break-all",
                 }}
               >
-                {closingText}
+                {routeSummary}
               </p>
               <div style={{ marginTop: 8, color: colors.muted, fontSize: 8, lineHeight: 1.5, letterSpacing: "0.05em" }}>
                 {locationLine}
               </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 9 }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
-                {footerKeywords.map((keyword) => (
-                  <span
-                    key={keyword}
-                    style={{
-                      border: `1px solid rgba(119,111,99,.28)`,
-                      background: "rgba(255,253,247,.62)",
-                      color: colors.muted,
-                      padding: "3px 6px",
-                      fontSize: 8,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {keyword}
-                  </span>
-                ))}
-                </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 9 }}>
                 <div style={{ color: colors.muted, fontSize: 8, letterSpacing: "0.12em", whiteSpace: "nowrap" }}>{authorName} / Conch</div>
               </div>
           </div>
